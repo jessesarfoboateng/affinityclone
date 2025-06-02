@@ -27,11 +27,30 @@ declare module 'expo-router' {
 
   export function useLocalSearchParams<T extends Record<string, string>>(): T;
 
-  export function Stack(): JSX.Element;
+  interface StackProps {
+    children?: React.ReactNode;
+    screenOptions?: {
+      headerShown?: boolean;
+      animation?: 'default' | 'fade' | 'slide_from_right' | 'slide_from_left' | 'slide_from_bottom' | 'slide_from_top' | 'none';
+      [key: string]: any;
+    };
+  }
+
+  interface StackScreenProps {
+    name: string;
+    options?: {
+      headerShown?: boolean;
+      animation?: 'default' | 'fade' | 'slide_from_right' | 'slide_from_left' | 'slide_from_bottom' | 'slide_from_top' | 'none';
+      [key: string]: any;
+    };
+  }
+
+  interface StackComponent extends React.FC<StackProps> {
+    Screen: React.FC<StackScreenProps>;
+  }
+
+  export const Stack: StackComponent;
   export function Slot(): JSX.Element;
   export function Tabs(): JSX.Element;
   export function Drawer(): JSX.Element;
-}
-
-declare const types: Record<string, never>;
-export default types; 
+} 
