@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PagerView from 'react-native-pager-view';
@@ -34,6 +34,7 @@ const onboardingData = [
 ];
 
 export default function OnboardingScreen() {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(0);
   const pagerRef = useRef<PagerView>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -58,7 +59,7 @@ export default function OnboardingScreen() {
   const handleSkip = async () => {
     try {
       await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-      router.replace('/(tabs)/home');
+      router.replace('/(auth)/phone');
     } catch (error) {
       console.error('Error saving onboarding status:', error);
     }
@@ -67,9 +68,18 @@ export default function OnboardingScreen() {
   const handleFinish = async () => {
     try {
       await AsyncStorage.setItem('hasSeenOnboarding', 'true');
-      router.replace('/(tabs)/home');
+      router.replace('/(auth)/phone');
     } catch (error) {
       console.error('Error saving onboarding status:', error);
+    }
+  };
+
+  const clearStorage = async () => {
+    try {
+      await AsyncStorage.removeItem('hasSeenOnboarding');
+      router.replace('/(onboarding)');
+    } catch (error) {
+      console.error('Error clearing storage:', error);
     }
   };
 
@@ -239,5 +249,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Montserrat',
+  },
+  clearButton: {
+    backgroundColor: '#ff4444',
+    padding: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 }); 

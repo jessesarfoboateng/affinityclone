@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Slot, Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { ApplicationProvider } from '../context/ApplicationContext';
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
@@ -18,38 +19,44 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    checkOnboarding();
-  }, []);
+    const checkOnboarding = async () => {
+      try {
+        const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
+        console.log('hasSeenOnboarding value:', hasSeenOnboarding);
 
-  async function checkOnboarding() {
-    try {
-      const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
-
-      if (!hasSeenOnboarding) {
-        router.replace('/(onboarding)');
-      } else {
-        router.replace('/(tabs)');
+        // Only redirect if we're not already on the correct screen
+        const currentSegment = segments[0];
+        if (!hasSeenOnboarding && currentSegment !== '(onboarding)') {
+          router.replace('/(onboarding)/index');
+        } else if (hasSeenOnboarding && currentSegment !== '(auth)') {
+          router.replace('/(auth)/phone');
+        }
+      } catch (error) {
+        console.error('Error checking onboarding status:', error);
+        router.replace('/(onboarding)/index');
+      } finally {
+        setIsReady(true);
       }
-    } catch (error) {
-      console.error('Error checking onboarding status:', error);
-    } finally {
-      setIsReady(true);
-    }
-  }
+    };
+
+    checkOnboarding();
+  }, [segments]); // Add segments as dependency
 
   if (!isReady || !loaded) {
-    // Show a loading screen or splash screen here
-    return <Slot />;
+    return null;
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <ApplicationProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </ApplicationProvider>
   );
 }

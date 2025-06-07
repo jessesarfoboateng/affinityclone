@@ -12,7 +12,8 @@
     "types": [
       "react-native",
       "expo-router",
-      "nativewind/types"
+      "nativewind/types",
+      "expo-camera"
     ]
   },
   "include": [
