@@ -101,12 +101,17 @@ type DocumentCaptureStyles = {
   input: TextStyle;
   inputLabel: TextStyle;
   errorText: TextStyle;
-  // doneButtonContainer: ViewStyle;
-  // doneButton: ViewStyle;
-  // doneButtonText: TextStyle;
   clearButton: ViewStyle;
   headerTitle: TextStyle;
   backButton: ViewStyle;
+  corner: ViewStyle;
+  topLeft: ViewStyle;
+  topRight: ViewStyle;
+  bottomLeft: ViewStyle;
+  bottomRight: ViewStyle;
+  frameLabel: TextStyle;
+  instructionsText: TextStyle;
+  cameraWrapper: ViewStyle;
 };
 
 export default function DocumentCaptureScreen() {
@@ -132,6 +137,7 @@ export default function DocumentCaptureScreen() {
   const [showPreview, setShowPreview] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
   const [ghanaCardNumber, setGhanaCardNumber] = useState('');
   const [ghanaCardError, setGhanaCardError] = useState('');
 
@@ -195,6 +201,48 @@ export default function DocumentCaptureScreen() {
     });
   };
 
+  const transitionToNextDocument = async (nextDoc: DocumentType) => {
+    try {
+      // Fade out current view
+      await new Promise<void>((resolve) => {
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: -100,
+            duration: 300,
+            useNativeDriver: true,
+          })
+        ]).start(() => resolve());
+      });
+
+      // Update document type
+      setCurrentDocument(nextDoc);
+
+      // Reset position and fade in
+      slideAnim.setValue(100);
+      await new Promise<void>((resolve) => {
+        Animated.parallel([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          })
+        ]).start(() => resolve());
+      });
+    } catch (error) {
+      console.error('Error during transition:', error);
+    }
+  };
+
   const handleImageCapture = async (imageUri: string) => {
     try {
       setLoadingState(prev => ({ ...prev, isCheckingQuality: true }));
@@ -212,17 +260,9 @@ export default function DocumentCaptureScreen() {
 
       // Move to next document type if not selfie
       if (currentDocument === 'ghanaCardFront') {
-        setIsTransitioning(true);
-        await fadeOut();
-        setCurrentDocument('ghanaCardBack');
-        await fadeIn();
-        setIsTransitioning(false);
+        await transitionToNextDocument('ghanaCardBack');
       } else if (currentDocument === 'ghanaCardBack') {
-        setIsTransitioning(true);
-        await fadeOut();
-        setCurrentDocument('selfie');
-        await fadeIn();
-        setIsTransitioning(false);
+        await transitionToNextDocument('selfie');
       } else if (currentDocument === 'selfie') {
         setIsTransitioning(true);
         await fadeOut();
@@ -238,6 +278,50 @@ export default function DocumentCaptureScreen() {
       return false;
     } finally {
       setLoadingState(prev => ({ ...prev, isCheckingQuality: false }));
+    }
+  };
+
+  const clearStoredImages = async () => {
+    try {
+      setLoadingState(prev => ({ ...prev, isUploading: true }));
+
+      // Clear all images from the document directory
+      const files = await FileSystem.readDirectoryAsync(FileSystem.documentDirectory);
+      for (const file of files) {
+        if (file.startsWith('image-')) {
+          await FileSystem.deleteAsync(`${FileSystem.documentDirectory}${file}`);
+        }
+      }
+
+      // Reset the captured images state
+      setCapturedImages({
+        ghanaCardFront: '',
+        ghanaCardBack: '',
+        selfie: ''
+      });
+
+      // Reset application context
+      if (applicationData) {
+        setApplicationData({
+          ...applicationData,
+          identityInfo: {
+            ...applicationData.identityInfo,
+            ghanaCardFront: '',
+            ghanaCardBack: ''
+          },
+          selfieInfo: {
+            ...applicationData.selfieInfo,
+            selfie: ''
+          }
+        });
+      }
+
+      Alert.alert('Success', 'All stored images have been cleared.');
+    } catch (error) {
+      console.error('Error clearing images:', error);
+      Alert.alert('Error', 'Failed to clear stored images.');
+    } finally {
+      setLoadingState(prev => ({ ...prev, isUploading: false }));
     }
   };
 
@@ -374,17 +458,19 @@ export default function DocumentCaptureScreen() {
                   setCapturedImages(newImages);
 
                   // Update application context
-                  const updatedData: Partial<ApplicationData> = {
-                    identityInfo: {
-                      ghanaCardNumber: applicationData?.identityInfo?.ghanaCardNumber || '',
-                      ghanaCardFront: currentDocument === 'ghanaCardFront' ? permanentUri : capturedImages.ghanaCardFront,
-                      ghanaCardBack: currentDocument === 'ghanaCardBack' ? permanentUri : capturedImages.ghanaCardBack
-                    },
-                    selfieInfo: {
-                      selfie: currentDocument === 'selfie' ? permanentUri : capturedImages.selfie
-                    }
-                  };
-                  setApplicationData(updatedData);
+                  if (applicationData) {
+                    const updatedData: Partial<ApplicationData> = {
+                      identityInfo: {
+                        ghanaCardNumber: applicationData.identityInfo?.ghanaCardNumber || '',
+                        ghanaCardFront: currentDocument === 'ghanaCardFront' ? permanentUri : (capturedImages.ghanaCardFront || ''),
+                        ghanaCardBack: currentDocument === 'ghanaCardBack' ? permanentUri : (capturedImages.ghanaCardBack || '')
+                      },
+                      selfieInfo: {
+                        selfie: currentDocument === 'selfie' ? permanentUri : (capturedImages.selfie || '')
+                      }
+                    };
+                    setApplicationData(updatedData);
+                  }
 
                   // Move to next document or show preview
                   const nextDoc = getNextDocument(currentDocument);
@@ -565,48 +651,6 @@ export default function DocumentCaptureScreen() {
     return currentIndex < docs.length - 1 ? docs[currentIndex + 1] : null;
   };
 
-  const clearStoredImages = async () => {
-    try {
-      setLoadingState(prev => ({ ...prev, isUploading: true }));
-
-      // Clear all images from the document directory
-      const files = await FileSystem.readDirectoryAsync(FileSystem.documentDirectory);
-      for (const file of files) {
-        if (file.startsWith('image-')) {
-          await FileSystem.deleteAsync(`${FileSystem.documentDirectory}${file}`);
-        }
-      }
-
-      // Reset the captured images state
-      setCapturedImages({
-        ghanaCardFront: '',
-        ghanaCardBack: '',
-        selfie: ''
-      });
-
-      // Reset application context
-      setApplicationData(prev => ({
-        ...prev,
-        identityInfo: {
-          ...prev?.identityInfo,
-          ghanaCardFront: '',
-          ghanaCardBack: ''
-        },
-        selfieInfo: {
-          ...prev?.selfieInfo,
-          selfie: ''
-        }
-      }));
-
-      Alert.alert('Success', 'All stored images have been cleared.');
-    } catch (error) {
-      console.error('Error clearing images:', error);
-      Alert.alert('Error', 'Failed to clear stored images.');
-    } finally {
-      setLoadingState(prev => ({ ...prev, isUploading: false }));
-    }
-  };
-
   if (cameraVisible) {
     if (hasPermission === null) {
       return <View style={styles.cameraContainer}><ActivityIndicator size="large" color="#0000ff" /></View>;
@@ -623,74 +667,71 @@ export default function DocumentCaptureScreen() {
     }
 
     return (
-      <View style={styles.cameraContainer}>
-        <Animated.View style={[styles.camera, { opacity: fadeAnim }]}>
-          <CameraView
-            style={styles.camera}
-            facing={currentDocument === 'selfie' ? 'front' : 'back'}
-            ref={cameraRef}
-          />
-          <View style={[StyleSheet.absoluteFill, styles.cameraOverlay]}>
-            {currentDocument === 'selfie' ? (
-              <View style={styles.faceFrameContainer}>
-                <View style={[
-                  styles.faceFrame,
-                  isWellPositioned && styles.wellPositionedFrame
-                ]}>
-                  <View style={styles.faceFrameCorners} />
-                  <View style={styles.faceGuideLines}>
-                    <View style={styles.faceGuideLine} />
-                    <View style={[styles.faceGuideLine, { transform: [{ rotate: '90deg' }] }]} />
+      <View style={styles.container}>
+        <View style={styles.cameraContainer}>
+          <Animated.View style={[
+            styles.cameraWrapper,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateX: slideAnim }]
+            }
+          ]}>
+            <CameraView
+              ref={cameraRef}
+              style={styles.camera}
+              facing={currentDocument === 'selfie' ? 'front' : 'back'}
+            >
+              <View style={styles.cameraOverlay}>
+                {currentDocument === 'selfie' ? (
+                  <View style={styles.faceFrameContainer}>
+                    <View style={styles.faceFrame}>
+                      <View style={styles.faceFrameCorners}>
+                        <View style={[styles.corner, styles.topLeft]} />
+                        <View style={[styles.corner, styles.topRight]} />
+                        <View style={[styles.corner, styles.bottomLeft]} />
+                        <View style={[styles.corner, styles.bottomRight]} />
+                      </View>
+                    </View>
+                    <View style={styles.faceGuideLines}>
+                      <View style={styles.faceGuideLine} />
+                      <View style={styles.faceGuideLine} />
+                    </View>
+                    <Text style={styles.faceInstructions}>Position your face in the frame</Text>
+                    <Text style={styles.faceSubInstructions}>Look directly at the camera</Text>
                   </View>
-                  <View style={styles.facePositionIndicator}>
-                    <Ionicons name="arrow-down" size={24} color="white" style={styles.facePositionArrow} />
-                  </View>
-                </View>
-                <Text style={[styles.overlayText, styles.faceInstructions]}>
-                  {isWellPositioned ? 'Perfect! Hold still' : 'Center your face in the circle'}
-                </Text>
-                <Text style={[styles.overlayText, styles.faceSubInstructions]}>
-                  {isWellPositioned ? 'Ready to capture' : 'Make sure your face is clearly visible'}
-                </Text>
-                <View style={styles.faceTipsContainer}>
-                  <Text style={styles.faceTipText}>• Good lighting</Text>
-                  <Text style={styles.faceTipText}>• Neutral expression</Text>
-                  <Text style={styles.faceTipText}>• No glasses or masks</Text>
-                </View>
+                ) : (
+                  <>
+                    <Text style={[styles.overlayText, styles.frameLabel]}>
+                      {currentDocument === 'ghanaCardFront' ? 'Front Side' : 'Back Side'}
+                    </Text>
+                    <View style={styles.idFrame}>
+                      <View style={styles.idFrameCorners}>
+                        <View style={[styles.corner, styles.topLeft]} />
+                        <View style={[styles.corner, styles.topRight]} />
+                        <View style={[styles.corner, styles.bottomLeft]} />
+                        <View style={[styles.corner, styles.bottomRight]} />
+                      </View>
+                    </View>
+                    <Text style={[styles.overlayText, styles.instructionsText]}>
+                      {isWellPositioned
+                        ? 'Perfect! Hold still'
+                        : 'Position your ID within the frame'}
+                    </Text>
+                  </>
+                )}
               </View>
-            ) : (
-              <View style={styles.idFrame}>
-                <View style={[
-                  styles.idFrameCorners,
-                  isWellPositioned && styles.wellPositionedFrame
-                ]} />
-                <Text style={[styles.overlayText, { position: 'absolute', top: -40 }]}>
-                  {currentDocument === 'ghanaCardFront' ? 'Front Side' : 'Back Side'}
-                </Text>
-              </View>
-            )}
-            <Text style={styles.overlayText}>
-              {isWellPositioned
-                ? 'Perfect! Hold still'
-                : currentDocument === 'selfie'
-                  ? 'Position your face within the frame'
-                  : 'Position your ID within the frame'}
-            </Text>
+            </CameraView>
+          </Animated.View>
+          <View style={styles.cameraButtons}>
+            <TouchableOpacity
+              style={styles.captureButton}
+              onPress={takePicture}
+              disabled={loadingState.isCapturing}
+            >
+              <View style={styles.captureButtonInner} />
+            </TouchableOpacity>
           </View>
-          <View style={[StyleSheet.absoluteFill, styles.cameraButtons]}>
-            {loadingState.isCapturing || loadingState.isCheckingQuality ? (
-              <ActivityIndicator size="large" color="white" />
-            ) : (
-              <TouchableOpacity
-                style={styles.captureButton}
-                onPress={takePicture}
-                disabled={loadingState.isCapturing || loadingState.isCheckingQuality}
-              >
-                <View style={styles.captureButtonInner} />
-              </TouchableOpacity>
-            )}
-          </View>
-        </Animated.View>
+        </View>
         {isTransitioning && (
           <View style={styles.transitionOverlay}>
             <ActivityIndicator size="large" color="white" />
@@ -891,7 +932,7 @@ const styles = StyleSheet.create<DocumentCaptureStyles>({
   },
   cameraContainer: {
     flex: 1,
-    backgroundColor: 'black',
+    position: 'relative',
   },
   camera: {
     flex: 1,
@@ -918,33 +959,36 @@ const styles = StyleSheet.create<DocumentCaptureStyles>({
   },
   overlayText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: 'bold',
     textAlign: 'center',
-    paddingHorizontal: 40,
-  } as TextStyle,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
   cameraButtons: {
     position: 'absolute',
     bottom: 40,
     left: 0,
     right: 0,
-    alignItems: 'center',
-  },
-  captureButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
+    paddingHorizontal: 20,
+  },
+  captureButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   captureButtonInner: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'white',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#fff',
   },
   scrollContainer: {
     flexGrow: 1,
@@ -1104,14 +1148,23 @@ const styles = StyleSheet.create<DocumentCaptureStyles>({
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   faceInstructions: {
-    marginTop: 20,
+    color: 'white',
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 20,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   faceSubInstructions: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
     marginTop: 8,
-    fontSize: 14,
-    opacity: 0.8,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   facePositionIndicator: {
     position: 'absolute',
@@ -1212,5 +1265,47 @@ const styles = StyleSheet.create<DocumentCaptureStyles>({
   },
   backButton: {
     padding: 8,
+  },
+  corner: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    borderColor: 'white',
+    borderWidth: 2,
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+  },
+  frameLabel: {
+    marginBottom: 20,
+    marginTop: -40,
+  },
+  instructionsText: {
+    marginTop: 20,
+  },
+  cameraWrapper: {
+    flex: 1,
+    width: '100%',
   },
 });
