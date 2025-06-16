@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, KeyboardAvoidingView, Platform, SafeAreaView, Dimensions, TextInput, Modal } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView, KeyboardAvoidingView, Platform, SafeAreaView, Dimensions, TextInput, Modal, Alert } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
+import { useApplication } from '../../context/ApplicationContext';
 
 interface FormData {
   gender: string;
@@ -16,6 +17,7 @@ interface FormData {
 export default function OpenAccountScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { setApplicationData } = useApplication();
   const [formData, setFormData] = useState<FormData>({
     gender: '',
     dateOfBirth: new Date(),
@@ -40,9 +42,35 @@ export default function OpenAccountScreen() {
   };
 
   const handleSubmit = () => {
-    // TODO: Validate form data
-    // TODO: Save user information
-    router.push('/identity-verification');
+    // Validate form data
+    if (!formData.gender || !formData.nationality || !formData.countryOfResidence || !formData.email) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    // Format the data for the application context
+    const personalInfo = {
+      fullName: fullName,
+      dateOfBirth: formData.dateOfBirth.toISOString(),
+      email: formData.email,
+      phone: `+233${phoneNumber}`,
+      address: `${formData.countryOfResidence}` // You might want to add more address fields
+    };
+
+    // Save to application context
+    setApplicationData({ personalInfo });
+
+    // Navigate to identity verification with the data
+    const queryParams = new URLSearchParams({
+      fullName,
+      dateOfBirth: formData.dateOfBirth.toISOString(),
+      email: formData.email,
+      phone: `+233${phoneNumber}`,
+      nationality: formData.nationality,
+      countryOfResidence: formData.countryOfResidence
+    }).toString();
+
+    router.push(`/identity-verification?${queryParams}`);
   };
 
   const formatDate = (date: Date) => {

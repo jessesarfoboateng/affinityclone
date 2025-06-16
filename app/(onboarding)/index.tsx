@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { Dimensions, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import PagerView from 'react-native-pager-view';
 
 const { width, height } = Dimensions.get('window');
 
+// Memoize onboarding data to prevent unnecessary re-renders
 const onboardingData = [
   {
     id: 1,
@@ -39,11 +40,12 @@ export default function OnboardingScreen() {
   const pagerRef = useRef<PagerView>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const handlePageSelected = (e: any) => {
+  // Memoize handlers to prevent unnecessary re-renders
+  const handlePageSelected = useMemo(() => (e: any) => {
     setCurrentPage(e.nativeEvent.position);
-  };
+  }, []);
 
-  const handleNext = () => {
+  const handleNext = useMemo(() => () => {
     if (currentPage < onboardingData.length - 1) {
       if (Platform.OS === 'web') {
         scrollViewRef.current?.scrollTo({ x: (currentPage + 1) * width, animated: true });
@@ -54,25 +56,25 @@ export default function OnboardingScreen() {
     } else {
       handleFinish();
     }
-  };
+  }, [currentPage]);
 
-  const handleSkip = async () => {
+  const handleSkip = useMemo(() => async () => {
     try {
       await AsyncStorage.setItem('hasSeenOnboarding', 'true');
       router.replace('/(auth)/phone');
     } catch (error) {
       console.error('Error saving onboarding status:', error);
     }
-  };
+  }, [router]);
 
-  const handleFinish = async () => {
+  const handleFinish = useMemo(() => async () => {
     try {
       await AsyncStorage.setItem('hasSeenOnboarding', 'true');
       router.replace('/(auth)/phone');
     } catch (error) {
       console.error('Error saving onboarding status:', error);
     }
-  };
+  }, [router]);
 
   const clearStorage = async () => {
     try {
@@ -83,7 +85,7 @@ export default function OnboardingScreen() {
     }
   };
 
-  const renderContent = () => {
+  const renderContent = useMemo(() => {
     if (Platform.OS === 'web') {
       return (
         <ScrollView
@@ -99,7 +101,12 @@ export default function OnboardingScreen() {
         >
           {onboardingData.map((item) => (
             <View key={item.id} style={[styles.page, { width }]}>
-              <Image source={item.image} style={styles.image} />
+              <Image
+                source={item.image}
+                style={styles.image}
+                resizeMode="contain"
+                fadeDuration={0}
+              />
               <Text style={styles.title}>{item.title}</Text>
               <Text style={styles.description}>{item.description}</Text>
             </View>
@@ -117,19 +124,23 @@ export default function OnboardingScreen() {
       >
         {onboardingData.map((item) => (
           <View key={item.id} style={styles.page}>
-            <Image source={item.image} style={styles.image} />
+            <Image
+              source={item.image}
+              style={styles.image}
+              resizeMode="contain"
+              fadeDuration={0}
+            />
             <Text style={styles.title}>{item.title}</Text>
             <Text style={styles.description}>{item.description}</Text>
           </View>
         ))}
       </PagerView>
     );
-  };
+  }, [handlePageSelected]);
 
   return (
     <View style={styles.container}>
-      {renderContent()}
-
+      {renderContent}
       <View style={styles.footer}>
         <View style={styles.pagination}>
           {onboardingData.map((_, index) => (
@@ -142,17 +153,10 @@ export default function OnboardingScreen() {
             />
           ))}
         </View>
-
-        <View style={[
-          styles.buttonContainer,
-          currentPage === onboardingData.length - 1 && styles.buttonContainerCenter
-        ]}>
-          {currentPage < onboardingData.length - 1 && (
-            <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-              <Text style={styles.skipButtonText}>Skip</Text>
-            </TouchableOpacity>
-          )}
-
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+            <Text style={styles.skipButtonText}>Skip</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
             <Text style={styles.nextButtonText}>
               {currentPage === onboardingData.length - 1 ? 'Get Started' : 'Next'}
@@ -181,12 +185,12 @@ const styles = StyleSheet.create({
   image: {
     width: width * 0.8,
     height: height * 0.4,
-    resizeMode: 'contain',
-    marginBottom: 40,
+    marginBottom: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#411D4B',
     marginBottom: 10,
     textAlign: 'center',
   },
@@ -208,47 +212,35 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#ccc',
+    backgroundColor: '#D1D1D1',
     marginHorizontal: 4,
   },
   paginationDotActive: {
     backgroundColor: '#411D4B',
+    width: 20,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  buttonContainerCenter: {
-    justifyContent: 'center',
-  },
   skipButton: {
-    backgroundColor: '#fff',
     padding: 10,
-    borderRadius: 10,
-    minWidth: 100,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#411D4B',
   },
   skipButtonText: {
-    color: '#411D4B',
+    color: '#666',
     fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Montserrat',
   },
   nextButton: {
     backgroundColor: '#411D4B',
-    padding: 10,
-    borderRadius: 10,
-    minWidth: 100,
-    alignItems: 'center',
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
   },
   nextButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Montserrat',
+    fontWeight: 'bold',
   },
   clearButton: {
     backgroundColor: '#ff4444',

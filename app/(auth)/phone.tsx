@@ -1,11 +1,16 @@
+import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView, KeyboardAvoidingView, Platform, Dimensions, Alert } from 'react-native';
+import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView, KeyboardAvoidingView, Platform, Dimensions, Alert, ActivityIndicator } from 'react-native';
+import { useApplication } from '../../context/ApplicationContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function PhoneScreen() {
   const router = useRouter();
+  const { setAuthenticated } = useApplication();
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handlePhoneNumberChange = (text: string) => {
     // Remove any non-digit characters
@@ -24,8 +29,37 @@ export default function PhoneScreen() {
       return;
     }
 
-    // TODO: Check if user exists in database
-    router.push(`/otp?phoneNumber=${phoneNumber}`);
+    try {
+      setIsLoading(true);
+
+      // TODO: Replace with actual API call
+      // const response = await fetch('YOUR_API_URL/api/auth/check-user', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ phoneNumber: `+233${phoneNumber}` })
+      // });
+      // const data = await response.json();
+
+      // For now, simulate API call
+      const userExists = false; // This will come from your backend
+
+      if (userExists) {
+        // User exists, set authenticated and store phone number
+        await Promise.all([
+          setAuthenticated(true),
+          AsyncStorage.setItem('phoneNumber', phoneNumber)
+        ]);
+        router.replace('/(tabs)/home');
+      } else {
+        // User doesn't exist, go to OTP for registration
+        router.push(`/otp?phoneNumber=${phoneNumber}`);
+      }
+    } catch (error) {
+      console.error('Error checking user:', error);
+      Alert.alert('Error', 'Failed to check user status. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleContactPress = () => {
@@ -73,6 +107,7 @@ export default function PhoneScreen() {
                 value={phoneNumber}
                 onChangeText={handlePhoneNumberChange}
                 maxLength={9}
+                editable={!isLoading}
               />
             </View>
             <Text style={styles.helperText}>
@@ -81,14 +116,21 @@ export default function PhoneScreen() {
           </View>
 
           <TouchableOpacity
-            style={styles.signContinueButton}
+            style={[styles.signContinueButton, isLoading && styles.buttonDisabled]}
             onPress={handleContinue}
+            disabled={isLoading}
           >
             <View style={styles.buttonContent}>
-              <Text style={styles.signContinueText}>
-                Continue
-              </Text>
-              <Ionicons name="arrow-forward" size={24} color="white" />
+              {isLoading ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.signContinueText}>
+                    Continue
+                  </Text>
+                  <Ionicons name="arrow-forward" size={24} color="white" />
+                </>
+              )}
             </View>
           </TouchableOpacity>
 
@@ -185,6 +227,9 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginTop: 20,
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   buttonContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -198,28 +243,23 @@ const styles = StyleSheet.create({
     flex: 1,
     textAlign: 'center',
   },
+  helperText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+  },
   linksContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 140,
-    paddingBottom: Platform.OS === 'ios' ? 0 : 10,
+    marginTop: 20,
   },
   linkText: {
     color: '#411D4B',
     fontSize: 14,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
   },
   linkSeparator: {
     color: '#411D4B',
-    fontSize: 14,
-    marginHorizontal: 8,
-  },
-  helperText: {
-    color: '#411D4B',
-    fontSize: 12,
-    marginTop: 5,
-    marginLeft: 10,
+    marginHorizontal: 10,
   },
 });

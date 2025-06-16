@@ -588,12 +588,40 @@ export default function DocumentCaptureScreen() {
   };
 
   const handleSubmit = async () => {
-    if (loadingState.isSubmitting) return;
-
     try {
       setLoadingState(prev => ({ ...prev, isSubmitting: true }));
-      // Add your submission logic here
-      router.push('/application-review');
+
+      // Validate Ghana card number
+      if (!ghanaCardNumber) {
+        setGhanaCardError('Please enter your Ghana Card number');
+        return;
+      }
+
+      // Validate that all required images are captured
+      if (!capturedImages.ghanaCardFront || !capturedImages.ghanaCardBack || !capturedImages.selfie) {
+        Alert.alert('Error', 'Please capture all required images');
+        return;
+      }
+
+      // Since we've validated that the images exist, we can safely assert they are not null
+      const ghanaCardFront = capturedImages.ghanaCardFront as string;
+      const ghanaCardBack = capturedImages.ghanaCardBack as string;
+      const selfie = capturedImages.selfie as string;
+
+      // Save all captured images and Ghana card number to application context
+      setApplicationData({
+        identityInfo: {
+          ghanaCardNumber: ghanaCardNumber,
+          ghanaCardFront,
+          ghanaCardBack
+        },
+        selfieInfo: {
+          selfie
+        }
+      });
+
+      // Show preview
+      setShowPreview(true);
     } catch (error) {
       console.error('Error submitting documents:', error);
       Alert.alert('Error', 'Failed to submit documents. Please try again.');

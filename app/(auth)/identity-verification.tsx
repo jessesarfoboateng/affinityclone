@@ -1,53 +1,76 @@
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View, ScrollView, SafeAreaView } from 'react-native';
+import { useApplication } from '../../context/ApplicationContext';
 
-export default function IDVerificationScreen() {
+export default function IdentityVerificationScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const { applicationData } = useApplication();
+
+  // Log the received data for debugging
+  useEffect(() => {
+    console.log('Received params:', params);
+    console.log('Application data:', applicationData);
+  }, [params, applicationData]);
 
   const handleContinue = () => {
     router.push('/document-capture');
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Ionicons name="shield-checkmark" size={48} color="#411D4B" />
-          <Text style={styles.title}>We need to verify your ID for security purposes</Text>
-          <Text style={styles.subtitle}>Before you start:</Text>
+          <Text style={styles.title}>Identity Verification</Text>
+          <Text style={styles.subtitle}>
+            Please verify your identity using your Ghana Card
+          </Text>
         </View>
 
-        <View style={styles.instructions}>
-          <View style={styles.instructionItem}>
-            <Ionicons name="id-card" size={20} color="#411D4B" />
-            <Text style={styles.instructionText}>You'll need to take photos of both sides of your Ghana Card</Text>
+        <View style={styles.infoContainer}>
+          <Text style={styles.infoTitle}>Personal Information</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Full Name:</Text>
+            <Text style={styles.infoValue}>{applicationData.personalInfo.fullName}</Text>
           </View>
-          <View style={styles.instructionItem}>
-            <Ionicons name="person" size={20} color="#411D4B" />
-            <Text style={styles.instructionText}>You'll also need to take a selfie</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Date of Birth:</Text>
+            <Text style={styles.infoValue}>
+              {new Date(applicationData.personalInfo.dateOfBirth).toLocaleDateString()}
+            </Text>
           </View>
-          <View style={styles.instructionItem}>
-            <Ionicons name="sunny" size={20} color="#411D4B" />
-            <Text style={styles.instructionText}>Ensure that you are in a well lit room</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Email:</Text>
+            <Text style={styles.infoValue}>{applicationData.personalInfo.email}</Text>
           </View>
-          <View style={styles.instructionItem}>
-            <Ionicons name="scan" size={20} color="#411D4B" />
-            <Text style={styles.instructionText}>Check that all four corners of your card are within the photo frame</Text>
-          </View>
-          <View style={styles.instructionItem}>
-            <Ionicons name="eye" size={20} color="#411D4B" />
-            <Text style={styles.instructionText}>Make sure all pictures are clear and readable</Text>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Phone:</Text>
+            <Text style={styles.infoValue}>{applicationData.personalInfo.phone}</Text>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.continueButton}
-          onPress={handleContinue}
-        >
-          <Text style={styles.continueButtonText}>Continue</Text>
-          <Ionicons name="arrow-forward" size={20} color="white" />
+        <View style={styles.instructionsContainer}>
+          <Text style={styles.instructionsTitle}>What you'll need:</Text>
+          <View style={styles.instructionItem}>
+            <Ionicons name="card" size={24} color="#411D4B" />
+            <Text style={styles.instructionText}>Your Ghana Card</Text>
+          </View>
+          <View style={styles.instructionItem}>
+            <Ionicons name="camera" size={24} color="#411D4B" />
+            <Text style={styles.instructionText}>A well-lit environment</Text>
+          </View>
+          <View style={styles.instructionItem}>
+            <Ionicons name="checkmark-circle" size={24} color="#411D4B" />
+            <Text style={styles.instructionText}>Your face for verification</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.button} onPress={handleContinue}>
+          <Text style={styles.buttonText}>Continue</Text>
+          <Ionicons name="arrow-forward" size={24} color="white" />
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -55,60 +78,89 @@ export default function IDVerificationScreen() {
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#71C7D8',
   },
-  scrollContainer: {
-    flexGrow: 1,
-    padding: 24,
-    paddingBottom: 40,
+  content: {
+    padding: 20,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#411D4B',
-    textAlign: 'center',
     marginTop: 16,
-    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 18,
-    color: '#411D4B',
+    fontSize: 16,
+    color: '#666',
     textAlign: 'center',
+    marginTop: 8,
+  },
+  infoContainer: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+  },
+  infoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#411D4B',
+    marginBottom: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
-  instructions: {
+  infoLabel: {
+    fontSize: 16,
+    color: '#666',
+  },
+  infoValue: {
+    fontSize: 16,
+    color: '#411D4B',
+    fontWeight: '500',
+  },
+  instructionsContainer: {
     marginBottom: 32,
-    gap: 16,
+  },
+  instructionsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#411D4B',
+    marginBottom: 16,
   },
   instructionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    marginBottom: 12,
   },
   instructionText: {
     fontSize: 16,
-    color: '#411D4B',
-    flex: 1,
+    color: '#666',
+    marginLeft: 12,
   },
-  continueButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  button: {
     backgroundColor: '#411D4B',
-    padding: 16,
     borderRadius: 12,
-    marginTop: 'auto',
-    gap: 8,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  continueButtonText: {
+  buttonText: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginRight: 8,
   },
 });

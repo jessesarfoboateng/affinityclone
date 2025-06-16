@@ -1,79 +1,103 @@
+import React, { useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView, KeyboardAvoidingView, Platform, Dimensions, Alert, ActivityIndicator } from 'react-native';
+import { useApplication } from '../../context/ApplicationContext';
 
 export default function OTPScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const { phoneNumber } = useLocalSearchParams();
+  const { setAuthenticated } = useApplication();
   const [otp, setOtp] = useState(['', '', '', '']);
-  const [timeLeft, setTimeLeft] = useState(30); // 30 seconds countdown
-  const [canResend, setCanResend] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const otpInputs = useRef<Array<TextInput | null>>([]);
+  const [countdown, setCountdown] = useState(60);
+  const [isLoading, setIsLoading] = useState(false);
+  const inputRefs = useRef<(TextInput | null)[]>([]);
 
   useEffect(() => {
-    if (timeLeft > 0) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else {
-      setCanResend(true);
+    let timeout: NodeJS.Timeout;
+    if (countdown > 0) {
+      timeout = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000) as unknown as NodeJS.Timeout;
     }
+    return () => clearInterval(timeout);
+  }, [countdown]);
 
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [timeLeft]);
-
-  const handleOtpChange = (value: string, index: number) => {
+  const handleOtpChange = (text: string, index: number) => {
     const newOtp = [...otp];
-    newOtp[index] = value;
+    newOtp[index] = text;
     setOtp(newOtp);
 
-    // Move to next input if value is entered
-    if (value && index < 5) {
-      otpInputs.current[index + 1]?.focus();
+    // Auto-focus next input
+    if (text && index < 3) {
+      inputRefs.current[index + 1]?.focus();
     }
   };
 
-  const handleKeyPress = (e: any, index: number) => {
-    // Move to previous input on backspace if current input is empty
-    if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
-      otpInputs.current[index - 1]?.focus();
+  const handleResendOtp = async () => {
+    if (countdown > 0) return;
+
+    try {
+      setIsLoading(true);
+      // TODO: Replace with actual API call
+      // const response = await fetch('YOUR_API_URL/api/auth/resend-otp', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ phoneNumber: `+233${phoneNumber}` })
+      // });
+
+      // For now, simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      setCountdown(60);
+      Alert.alert('Success', 'OTP resent successfully');
+    } catch (error) {
+      console.error('Error resending OTP:', error);
+      Alert.alert('Error', 'Failed to resend OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleVerify = async () => {
     const otpString = otp.join('');
-    if (otpString.length === 4) {
-      // TODO: Add OTP validation
-      // TODO: Check if user exists in database
-      // For now, we'll simulate checking if user exists
-      const userExists = false; // This should come from your backend
+    if (otpString.length !== 4) {
+      Alert.alert('Invalid OTP', 'Please enter the complete 4-digit OTP');
+      return;
+    }
 
-      if (userExists) {
-        router.replace('/(tabs)');
+    try {
+      setIsLoading(true);
+
+      // TODO: Replace with actual API call
+      // const response = await fetch('YOUR_API_URL/api/auth/verify-otp', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ 
+      //     phoneNumber: `+233${phoneNumber}`,
+      //     otp: otpString
+      //   })
+      // });
+      // const data = await response.json();
+
+      // For now, simulate successful OTP verification
+      const otpIsValid = true; // ✅ Define this variable
+
+      if (otpIsValid) {
+        // OTP verified, continue to registration
+        router.push(`/register?phoneNumber=${phoneNumber}`);
+        // DON'T call setAuthenticated(true) here
       } else {
-        router.push('/register?' + new URLSearchParams({
-          phoneNumber: params.phoneNumber as string
-        }).toString());
+        // OTP invalid, show error
+        Alert.alert('Invalid OTP', 'Please try again');
       }
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      Alert.alert('Error', 'Failed to verify OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-  const handleResend = () => {
-    if (canResend) {
-      // TODO: Implement resend logic
-      setTimeLeft(30);
-      setCanResend(false);
-    }
-  };
-
-  const handleBack = () => {
-    router.back();
   };
 
   return (
@@ -82,57 +106,73 @@ export default function OTPScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        <View style={styles.headerContainer}>
-          <TouchableOpacity
-            style={styles.headerBackButton}
-            onPress={handleBack}
-          >
-            <Ionicons name="arrow-back" size={40} color="#411D4B" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            Enter OTP
-          </Text>
+        {/* OTP Icon */}
+        <View style={styles.iconContainer}>
+          <Ionicons name="keypad-outline" size={100} color="#411D4B" />
         </View>
 
-        <View style={styles.contentContainer}>
-          <Text style={styles.subtitle}>
-            Enter the 4-digit code sent to your phone
+        {/* Content */}
+        <View style={styles.fillZoneContainer}>
+          <Text style={styles.enterOtpText}>
+            Enter OTP
+          </Text>
+
+          <Text style={styles.otpDescription}>
+            We have sent a 4-digit code to your phone number
           </Text>
 
           <View style={styles.otpContainer}>
-            {[...Array(4)].map((_, index) => (
+            {otp.map((digit, index) => (
               <TextInput
                 key={index}
                 style={styles.otpInput}
                 maxLength={1}
                 keyboardType="number-pad"
-                value={otp[index]}
+                value={digit}
                 onChangeText={(text) => handleOtpChange(text, index)}
+                editable={!isLoading}
                 ref={(ref) => {
-                  otpInputs.current[index] = ref;
+                  inputRefs.current[index] = ref;
                 }}
-                onKeyPress={(e) => handleKeyPress(e, index)}
               />
             ))}
           </View>
 
           <TouchableOpacity
-            style={styles.verifyButton}
+            style={[styles.verifyButton, isLoading && styles.buttonDisabled]}
             onPress={handleVerify}
+            disabled={isLoading}
           >
-            <Text style={styles.buttonText}>
-              Verify
-            </Text>
+            <View style={styles.buttonContent}>
+              {isLoading ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.verifyText}>
+                    Verify
+                  </Text>
+                  <Ionicons name="arrow-forward" size={24} color="white" />
+                </>
+              )}
+            </View>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.resendButton}
-            onPress={handleResend}
-          >
+          <View style={styles.resendContainer}>
             <Text style={styles.resendText}>
-              Resend Code
+              Didn't receive the code?{' '}
             </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleResendOtp}
+              disabled={countdown > 0 || isLoading}
+            >
+              <Text style={[
+                styles.resendLink,
+                (countdown > 0 || isLoading) && styles.resendLinkDisabled
+              ]}>
+                Resend {countdown > 0 ? `(${countdown}s)` : ''}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -140,7 +180,6 @@ export default function OTPScreen() {
 }
 
 const { height } = Dimensions.get('window');
-const bottomPadding = Platform.OS === 'ios' ? 34 : 24;
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -151,70 +190,97 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#71C7D8',
   },
-  headerContainer: {
-    flexDirection: 'row',
+  iconContainer: {
     alignItems: 'center',
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 0 : 20,
-    backgroundColor: '#71C7D8',
+    justifyContent: 'center',
+    paddingTop: Platform.OS === 'ios' ? 40 : 20,
+    paddingBottom: 20,
+    marginTop: 50,
   },
-  headerBackButton: {
-    marginRight: 10,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontFamily: 'Montserrat',
-    fontWeight: '500',
-    color: '#411D4B',
-  },
-  contentContainer: {
+  fillZoneContainer: {
     flex: 1,
     padding: 20,
-    paddingBottom: bottomPadding,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  subtitle: {
+  enterOtpText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#411D4B',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  otpDescription: {
     fontSize: 16,
     color: '#411D4B',
-    marginBottom: 30,
+    marginBottom: 48,
     textAlign: 'center',
-    fontFamily: 'Roboto',
+    paddingHorizontal: 20,
+    lineHeight: 22,
   },
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 30,
+    marginBottom: 48,
+    paddingHorizontal: 20,
+    width: '100%',
+    maxWidth: 320,
   },
   otpInput: {
-    width: 45,
-    height: 45,
+    width: 60,
+    height: 60,
     borderWidth: 1,
     borderColor: '#411D4B',
     borderRadius: 8,
     textAlign: 'center',
-    fontSize: 20,
-    backgroundColor: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
     color: '#411D4B',
+    backgroundColor: 'white',
   },
   verifyButton: {
     backgroundColor: '#411D4B',
     padding: 15,
     borderRadius: 10,
-    marginBottom: 15,
+    marginTop: 20,
+    width: '100%',
+    maxWidth: 320,
   },
-  buttonText: {
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+  },
+  verifyText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+    flex: 1,
     textAlign: 'center',
-    fontFamily: 'Roboto',
   },
-  resendButton: {
-    padding: 10,
+  resendContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+    paddingHorizontal: 20,
   },
   resendText: {
-    color: '#411D4B',
     fontSize: 14,
+    color: '#411D4B',
     textAlign: 'center',
-    fontFamily: 'Roboto',
+  },
+  resendLink: {
+    fontSize: 14,
+    color: '#411D4B',
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  resendLinkDisabled: {
+    opacity: 0.5,
   },
 }); 

@@ -66,15 +66,28 @@ export default function ApplicationReviewScreen() {
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
-      // Add your submission logic here
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
-      router.push('/(auth)/success');
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Get phone number from app context or state
+      const { personalInfo } = applicationData; // or wherever it's stored
+      const phone = personalInfo?.phone;
+
+      if (!phone) {
+        throw new Error('Phone number is missing when navigating to success screen.');
+      }
+
+      router.push(`/success?phone=${phone}`);
+
+
     } catch (error) {
+      console.error('❌ Submit error:', error);
       Alert.alert('Error', 'Failed to submit application. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -85,23 +98,23 @@ export default function ApplicationReviewScreen() {
           <View style={styles.sectionContent}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Full Name</Text>
-              <Text style={styles.infoValue}>{applicationData.personalInfo.fullName}</Text>
+              <Text style={styles.infoValue}>{applicationData.personalInfo?.fullName}</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Date of Birth</Text>
-              <Text style={styles.infoValue}>{applicationData.personalInfo.dateOfBirth}</Text>
+              <Text style={styles.infoValue}>{applicationData.personalInfo?.dateOfBirth}</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Email</Text>
-              <Text style={styles.infoValue}>{applicationData.personalInfo.email}</Text>
+              <Text style={styles.infoValue}>{applicationData.personalInfo?.email}</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Phone</Text>
-              <Text style={styles.infoValue}>{applicationData.personalInfo.phone}</Text>
+              <Text style={styles.infoValue}>{applicationData.personalInfo?.phone}</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Address</Text>
-              <Text style={styles.infoValue}>{applicationData.personalInfo.address}</Text>
+              <Text style={styles.infoValue}>{applicationData.personalInfo?.address}</Text>
             </View>
           </View>
         </View>

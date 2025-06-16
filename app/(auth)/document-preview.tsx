@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, ScrollView, ActivityIndicator, ViewStyle, TextStyle, ImageStyle, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -30,27 +30,32 @@ export default function DocumentPreviewScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
+  // Memoize the animation configuration
+  const animationConfig = useMemo(() => ({
+    fade: {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    },
+    slide: {
+      toValue: 0,
+      duration: 500,
+      useNativeDriver: true,
+    }
+  }), []);
+
   useEffect(() => {
-    console.log('Document Preview - Application Data:', applicationData);
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, animationConfig.fade),
+      Animated.timing(slideAnim, animationConfig.slide),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim, animationConfig]);
 
-  const handleBack = () => {
+  const handleBack = useMemo(() => () => {
     router.back();
-  };
+  }, [router]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useMemo(() => async () => {
     try {
       setIsSubmitting(true);
       // Add your submission logic here
@@ -61,7 +66,20 @@ export default function DocumentPreviewScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [router]);
+
+  const renderPreviewItem = useMemo(() => (label: string, imageUri: string | null) => (
+    <View style={styles.previewItem}>
+      <Text style={styles.previewLabel}>{label}</Text>
+      <Image
+        source={{ uri: imageUri || '' }}
+        style={styles.previewImage}
+        resizeMode="contain"
+        fadeDuration={0}
+        onError={(error) => console.error(`Error loading ${label}:`, error.nativeEvent.error)}
+      />
+    </View>
+  ), []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -85,45 +103,16 @@ export default function DocumentPreviewScreen() {
             transform: [{ translateY: slideAnim }]
           }
         ]}>
-          <View style={styles.previewItem}>
-            <Text style={styles.previewLabel}>Ghana Card Front</Text>
-            <Image
-              source={{ uri: applicationData.identityInfo.ghanaCardFront || '' }}
-              style={styles.previewImage}
-              resizeMode="contain"
-              onError={(error) => console.error('Error loading Ghana Card Front:', error.nativeEvent.error)}
-            />
-          </View>
-          <View style={styles.previewItem}>
-            <Text style={styles.previewLabel}>Ghana Card Back</Text>
-            <Image
-              source={{ uri: applicationData.identityInfo.ghanaCardBack || '' }}
-              style={styles.previewImage}
-              resizeMode="contain"
-              onError={(error) => console.error('Error loading Ghana Card Back:', error.nativeEvent.error)}
-            />
-          </View>
-          <View style={styles.previewItem}>
-            <Text style={styles.previewLabel}>Selfie</Text>
-            <Image
-              source={{ uri: applicationData.selfieInfo.selfie || '' }}
-              style={styles.previewImage}
-              resizeMode="contain"
-              onError={(error) => console.error('Error loading Selfie:', error.nativeEvent.error)}
-            />
-          </View>
+          {renderPreviewItem('Ghana Card Front', applicationData.identityInfo.ghanaCardFront)}
+          {renderPreviewItem('Ghana Card Back', applicationData.identityInfo.ghanaCardBack)}
+          {renderPreviewItem('Selfie', applicationData.selfieInfo.selfie)}
         </Animated.View>
 
-        <Animated.View style={[
-          styles.buttonsContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}>
+        <View style={styles.buttonsContainer}>
           <TouchableOpacity
             style={[styles.button, styles.secondaryButton]}
             onPress={handleBack}
+            disabled={isSubmitting}
           >
             <Ionicons name="arrow-back" size={20} color="#411D4B" />
             <Text style={[styles.buttonText, styles.secondaryButtonText]}>Back</Text>
@@ -137,58 +126,48 @@ export default function DocumentPreviewScreen() {
               <ActivityIndicator size="small" color="white" />
             ) : (
               <>
-                <Text style={[styles.buttonText, styles.primaryButtonText]}>Confirm & Submit</Text>
-                <Ionicons name="checkmark-circle" size={20} color="white" />
+                <Text style={[styles.buttonText, styles.primaryButtonText]}>Submit</Text>
+                <Ionicons name="checkmark" size={20} color="white" />
               </>
             )}
           </TouchableOpacity>
-        </Animated.View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create<DocumentPreviewStyles>({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#fff',
   },
   scrollContainer: {
     flexGrow: 1,
-    padding: 24,
-    paddingBottom: 40,
+    padding: 20,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 30,
   },
   title: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
     color: '#411D4B',
+    marginTop: 16,
     textAlign: 'center',
-    marginVertical: 12,
   },
   subtitle: {
-    fontSize: 14,
-    color: '#411D4B',
+    fontSize: 16,
+    color: '#666',
     textAlign: 'center',
-    lineHeight: 20,
-    opacity: 0.8,
+    marginTop: 8,
   },
   previewGrid: {
-    gap: 16,
-    marginVertical: 24,
+    marginBottom: 30,
   },
   previewItem: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: 20,
   },
   previewLabel: {
     fontSize: 16,
@@ -199,31 +178,32 @@ const styles = StyleSheet.create<DocumentPreviewStyles>({
   previewImage: {
     width: '100%',
     height: 200,
-    borderRadius: 8,
+    borderRadius: 12,
+    backgroundColor: '#f5f5f5',
   },
   buttonsContainer: {
-    gap: 12,
-    marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 'auto',
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    padding: 12,
     borderRadius: 12,
-    gap: 8,
+    minWidth: 120,
   },
   primaryButton: {
     backgroundColor: '#411D4B',
   },
   secondaryButton: {
-    backgroundColor: 'white',
-    borderWidth: 1,
-    borderColor: '#411D4B',
+    backgroundColor: '#f5f5f5',
   },
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
+    marginHorizontal: 8,
   },
   primaryButtonText: {
     color: 'white',

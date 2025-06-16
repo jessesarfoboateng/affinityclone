@@ -1,20 +1,44 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ViewStyle, TextStyle } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-
-type SuccessStyles = {
-  container: ViewStyle;
-  content: ViewStyle;
-  header: ViewStyle;
-  title: TextStyle;
-  subtitle: TextStyle;
-  button: ViewStyle;
-  buttonText: TextStyle;
-};
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useApplication } from '../../context/ApplicationContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SuccessScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const [isLoading, setIsLoading] = useState(false);
+  const { completeRegistration } = useApplication();
+
+  const handleContinue = async () => {
+    try {
+      setIsLoading(true);
+
+      const phone = params.phone as string;
+
+      console.log('📞 Received phone param:', phone);
+
+      if (!phone) {
+        throw new Error('❌ Phone number is missing from navigation parameters.');
+      }
+
+      console.log('✅ Registration completed successfully');
+
+      await AsyncStorage.setItem('phoneNumber', phone);
+      await completeRegistration();
+
+      console.log('➡️ Navigating to home from success');
+      router.replace('/(tabs)/home');
+
+    } catch (error) {
+      console.error('❌ Error completing registration:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -28,18 +52,25 @@ export default function SuccessScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.button}
-          onPress={() => router.push('/(tabs)')}
+          style={[styles.button, isLoading && styles.buttonDisabled]}
+          onPress={handleContinue}
+          disabled={isLoading}
         >
-          <Text style={styles.buttonText}>Continue to Dashboard</Text>
-          <Ionicons name="arrow-forward" size={20} color="white" />
+          {isLoading ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <>
+              <Text style={styles.buttonText}>Continue to Dashboard</Text>
+              <Ionicons name="arrow-forward" size={20} color="white" />
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create<SuccessStyles>({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
@@ -75,10 +106,15 @@ const styles = StyleSheet.create<SuccessStyles>({
     paddingHorizontal: 24,
     borderRadius: 12,
     gap: 8,
+    minWidth: 200,
+    justifyContent: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
-}); 
+});
