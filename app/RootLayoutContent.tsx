@@ -2,11 +2,10 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, ActivityIndicator, Text } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
-
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { ApplicationProvider, useApplication } from '../context/ApplicationContext';
+import { useApplication } from '../context/ApplicationContext';
+import { View, ActivityIndicator, Text } from 'react-native';
 
 function LoadingScreen() {
   return (
@@ -17,13 +16,15 @@ function LoadingScreen() {
   );
 }
 
-function RootLayoutNav() {
+export default function RootLayoutContent() {
   const colorScheme = useColorScheme();
   const {
     isAuthenticated,
     isFirstTimeUser,
     hasCompletedOnboarding,
-    loaded
+    loaded,
+    lastAuthStep,
+    setLastAuthStep
   } = useApplication();
 
   const router = useRouter();
@@ -32,18 +33,15 @@ function RootLayoutNav() {
   const navigationAttempted = useRef(false);
   const lastNavigationTime = useRef(0);
   const initialNavigationDone = useRef(false);
-  const lastSegment = useRef<string | undefined>(undefined);
 
-  // Create theme before any conditional returns
   const theme = useMemo(() => {
     return colorScheme === 'dark' ? DarkTheme : DefaultTheme;
   }, [colorScheme]);
 
-  // Handle initial navigation
+  // Handle first-time navigation
   useEffect(() => {
     if (!loaded || navigationAttempted.current) return;
 
-    // Wait for critical values to be resolved from storage
     const hasSettled =
       typeof isAuthenticated === 'boolean' &&
       typeof isFirstTimeUser === 'boolean' &&
@@ -57,20 +55,21 @@ function RootLayoutNav() {
       isAuthenticated,
       isFirstTimeUser,
       hasCompletedOnboarding,
+      lastAuthStep,
       currentSegment: segments[0]
     });
 
     try {
       if (isAuthenticated) {
-        console.log('➡️ Navigating to home');
         router.replace('/(tabs)/home');
       } else if (isFirstTimeUser && !hasCompletedOnboarding) {
-        console.log('➡️ Navigating to onboarding');
         router.replace('/(onboarding)');
+      } else if (lastAuthStep) {
+        router.replace(`/(auth)/${lastAuthStep}`);
       } else {
-        console.log('➡️ Navigating to auth');
-        router.replace('/(auth)');
+        router.replace('/(auth)/phone');
       }
+
       setNavigationComplete(true);
       initialNavigationDone.current = true;
     } catch (error) {
@@ -79,9 +78,9 @@ function RootLayoutNav() {
       setNavigationComplete(true);
       initialNavigationDone.current = true;
     }
-  }, [loaded, isAuthenticated, isFirstTimeUser, hasCompletedOnboarding, router]);
+  }, [loaded, isAuthenticated, isFirstTimeUser, hasCompletedOnboarding, lastAuthStep]);
 
-  // Handle authentication state changes during app usage
+  // Respond to auth state changes after initial load
   useEffect(() => {
     if (!loaded || !navigationComplete || !initialNavigationDone.current) return;
 
@@ -91,36 +90,31 @@ function RootLayoutNav() {
     const isTabsScreen = currentSegment === '(tabs)';
     const now = Date.now();
 
-    // Prevent rapid re-navigation (debounce)
-    if (now - lastNavigationTime.current < 1000) {
+    if (now - lastNavigationTime.current < 1000) return;
+
+    if (!isAuthenticated && !isFirstTimeUser && !hasCompletedOnboarding) {
+      console.log('🔁 Resetting incomplete auth state...');
+      setLastAuthStep("");
+      router.replace('/(auth)/phone');
       return;
     }
 
-    // Track segment changes
-    //if (currentSegment !== lastSegment.current) {
-    //  lastSegment.current = currentSegment;
-    //  return; // Don't navigate on segment changes
-    //}
-
-    // Only handle auth state changes after initial navigation
     if (isAuthenticated) {
-      // If we're already on the tabs screen, don't navigate again
-      if (isTabsScreen) {
-        return;
-      }
-      // If we're on auth or onboarding screens, navigate to home
-      if (isAuthScreen || isOnboardingScreen) {
-        console.log('🔄 User logged in, redirecting to home');
+      const currentSegment = segments[0]; // e.g., '(screens)', '(auth)', etc.
+    
+      const allowWhileAuthenticated = ['(tabs)', '(screens)'];
+      const isAllowed = allowWhileAuthenticated.includes(currentSegment);
+    
+      if (!isAllowed) {
+        console.log('🔄 Redirecting to home...');
         lastNavigationTime.current = now;
         router.replace('/(tabs)/home');
       }
     }
-  }, [isAuthenticated, loaded, hasCompletedOnboarding, router, segments, navigationComplete]);
+    
+  }, [isAuthenticated, isFirstTimeUser, hasCompletedOnboarding, navigationComplete, loaded, segments]);
 
-  // Show loading screen only while initializing
-  if (!loaded) {
-    return <LoadingScreen />;
-  }
+  if (!loaded) return <LoadingScreen />;
 
   return (
     <ThemeProvider value={theme}>
@@ -134,15 +128,10 @@ function RootLayoutNav() {
         <Stack.Screen name="(onboarding)" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(screens)"/>
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>
-  );
-}
-
-export default function RootLayout() {
-  return (
-    <RootLayoutNav />
   );
 }

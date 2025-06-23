@@ -2,15 +2,41 @@ import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { useEffect } from 'react';
 import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView, KeyboardAvoidingView, Platform, Dimensions, Alert, ActivityIndicator } from 'react-native';
 import { useApplication } from '../../context/ApplicationContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getTempData, saveTempData, clearTempData } from '../../utils/tempStorage';
+
 
 export default function PhoneScreen() {
+
+  const {setLastAuthStep} = useApplication()
+  useEffect(() => {
+    //Save this as the last authentication step
+    setLastAuthStep('phone')
+  }, []);
   const router = useRouter();
   const { setAuthenticated } = useApplication();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+
+  useEffect(() => {
+    const loadPhone = async () => {
+      const saved: { phoneNumber?: string } | null = await getTempData('phoneScreen');
+      if (saved?.phoneNumber) {
+        setPhoneNumber(saved.phoneNumber);
+      }
+    };
+    loadPhone();
+  }, []);
+  
+  
+  useEffect(() => {
+    saveTempData('phoneScreen', { phoneNumber });
+  }, [phoneNumber]);
+  
 
   const handlePhoneNumberChange = (text: string) => {
     // Remove any non-digit characters
@@ -23,36 +49,36 @@ export default function PhoneScreen() {
   };
 
   const handleContinue = async () => {
-    // Validate phone number
-    if (phoneNumber.length !== 9) {
-      Alert.alert('Invalid Phone Number', 'Please enter a valid 9-digit phone number without the leading 0');
+    // Clean input and ensure it's a valid Ghanaian number format
+    const cleanedNumber = phoneNumber.replace(/[^0-9]/g, '');
+
+    if (!/^0?[0-9]{9}$/.test(cleanedNumber)) {
+      Alert.alert('Invalid Phone Number', 'Enter a valid 9-digit phone number. It may start with 0.');
       return;
     }
+
+    // Remove leading zero if present
+    const formattedNumber = cleanedNumber.length === 10 && cleanedNumber.startsWith('0')
+      ? cleanedNumber.substring(1)
+      : cleanedNumber;
 
     try {
       setIsLoading(true);
 
-      // TODO: Replace with actual API call
-      // const response = await fetch('YOUR_API_URL/api/auth/check-user', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ phoneNumber: `+233${phoneNumber}` })
-      // });
-      // const data = await response.json();
+      // Simulated API call
+      const userExists = false; // Replace with actual API call result
 
-      // For now, simulate API call
-      const userExists = false; // This will come from your backend
+      // Save the cleaned/standardized number for both new and returning users
+      await AsyncStorage.setItem('phoneNumber', formattedNumber);
+
+       // ✅ Clear temporary data now that this step is complete
+    await clearTempData('phoneScreen');
 
       if (userExists) {
-        // User exists, set authenticated and store phone number
-        await Promise.all([
-          setAuthenticated(true),
-          AsyncStorage.setItem('phoneNumber', phoneNumber)
-        ]);
+        await setAuthenticated(true);
         router.replace('/(tabs)/home');
       } else {
-        // User doesn't exist, go to OTP for registration
-        router.push(`/otp?phoneNumber=${phoneNumber}`);
+        router.push(`/otp?phoneNumber=${formattedNumber}`);
       }
     } catch (error) {
       console.error('Error checking user:', error);
@@ -62,8 +88,10 @@ export default function PhoneScreen() {
     }
   };
 
+
   const handleContactPress = () => {
-    router.push('/contact-us');
+    router.push('/(screens)/contact-us');
+
   };
 
   const handleTermsPress = () => {
@@ -102,7 +130,7 @@ export default function PhoneScreen() {
               <Text style={styles.numCodeText}>+233</Text>
               <TextInput
                 style={styles.inputNumber}
-                placeholder="Enter your phone number (without 0)"
+                placeholder="Enter your phone number"
                 keyboardType="phone-pad"
                 value={phoneNumber}
                 onChangeText={handlePhoneNumberChange}

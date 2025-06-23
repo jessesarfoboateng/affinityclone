@@ -1,23 +1,38 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useTheme } from '@/context/ThemeContext';
+
 import {
   ScrollView,
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
+  FlatList,
   Image,
   SafeAreaView,
   Dimensions,
   RefreshControl,
-  Alert
+  Alert,
+  ImageBackground
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiService } from '../../services/api';
+//import { apiService } from '../../services/api';
+import { fetchMockAccountData } from '../../services/mockApi';
+
 import { useApplication } from '../../context/ApplicationContext';
 
 const { width } = Dimensions.get('window');
+
+
+type Service = {
+  id: string;
+  title: string;
+  icon: string;
+  color: string;
+};
+
 
 interface Transaction {
   id: string;
@@ -30,6 +45,26 @@ interface Transaction {
   recipientPhoneNumber?: string;
 }
 
+interface UserData {
+  id: number;
+  phoneNumber: string;
+  isPinSet: boolean;
+  application?: {
+    id: number;
+    status: string;
+    ghanaCardNumber: string;
+    personalInfo: {
+      firstName: string;
+      lastName: string;
+      dateOfBirth: string;
+      gender: string;
+      address: string;
+      city: string;
+      region: string;
+    };
+  };
+}
+
 const quickActions = [
   { id: '1', title: 'Send Money', icon: 'paper-plane', color: '#411D4B' },
   { id: '2', title: 'Pay Bills', icon: 'receipt', color: '#4CAF50' },
@@ -38,11 +73,22 @@ const quickActions = [
 ];
 
 export default function HomeScreen() {
+
+
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
+  const styles = getStyles(isDarkMode);
+
   const router = useRouter();
+  const { signOut } = useApplication();
+
   const [refreshing, setRefreshing] = useState(false);
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isBalanceVisible, setIsBalanceVisible] = useState(true); // New state for balance visibility
 
   useEffect(() => {
     loadUserData();
@@ -50,33 +96,40 @@ export default function HomeScreen() {
 
   const loadUserData = async () => {
     try {
+      setLoading(true);
+
+      // Load user data from storage
+      const storedUserData = await AsyncStorage.getItem('userData');
       const storedPhoneNumber = await AsyncStorage.getItem('phoneNumber');
-      if (!storedPhoneNumber) {
-        // If no phone number found, sign out and go to phone screen
-        const { signOut } = useApplication();
+
+      if (!storedPhoneNumber || !storedUserData) {
+        console.log('No user data found, redirecting to phone screen');
         await signOut();
         router.replace('/(auth)/phone');
         return;
       }
+
+      const parsedUserData = JSON.parse(storedUserData);
+      setUserData(parsedUserData);
       setPhoneNumber(storedPhoneNumber);
+
       await fetchAccountData(storedPhoneNumber);
     } catch (error) {
       console.error('Error loading user data:', error);
-      Alert.alert('Error', 'Failed to load account data');
+      Alert.alert('Error', 'Failed to load account data. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   const fetchAccountData = async (phone: string) => {
     try {
-      const [balanceData, transactionsData] = await Promise.all([
-        apiService.getAccountBalance(phone),
-        apiService.getRecentTransactions(phone)
-      ]);
+      const { balanceData, transactionsData } = await fetchMockAccountData(phone);
       setBalance(balanceData.balance);
       setTransactions(transactionsData);
     } catch (error) {
-      console.error('Error fetching account data:', error);
-      Alert.alert('Error', 'Failed to fetch account data');
+      console.error('Error fetching mock data:', error);
+      Alert.alert('Error', 'Failed to load account data. Please try again.');
     }
   };
 
@@ -101,26 +154,67 @@ export default function HomeScreen() {
     }).format(amount);
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
+
+  const getUserDisplayName = () => {
+    if (userData?.application?.personalInfo?.firstName) {
+      return userData.application.personalInfo.firstName;
+    }
+    return phoneNumber || 'User';
+  };
+
+  const getApplicationStatus = () => {
+    if (!userData?.application) return null;
+
+    const status = userData.application.status;
+    const statusColors = {
+      'PENDING': '#FF9800',
+      'DOCUMENTS_SUBMITTED': '#2196F3',
+      'APPROVED': '#4CAF50',
+      'REJECTED': '#F44336'
+    };
+
+    return {
+      status,
+      color: statusColors[status as keyof typeof statusColors] || '#666'
+    };
+  };
+
   const handleQuickAction = async (actionId: string) => {
     if (!phoneNumber) return;
 
     switch (actionId) {
       case '1': // Send Money
-        // TODO: Implement send money flow
         Alert.alert('Coming Soon', 'Send Money feature will be available soon');
         break;
       case '2': // Pay Bills
-        // TODO: Implement pay bills flow
         Alert.alert('Coming Soon', 'Pay Bills feature will be available soon');
         break;
       case '3': // Top Up
-        // TODO: Implement top up flow
         Alert.alert('Coming Soon', 'Top Up feature will be available soon');
         break;
       case '4': // More
-        // TODO: Implement more options
         Alert.alert('Coming Soon', 'More features will be available soon');
         break;
+    }
+  };
+
+  // New function to toggle balance visibility
+  const toggleBalanceVisibility = () => {
+    setIsBalanceVisible(!isBalanceVisible);
+  };
+
+  // Function to display balance or asterisks
+  const getDisplayBalance = () => {
+    if (isBalanceVisible) {
+      return formatCurrency(balance);
+    } else {
+      return 'GH₵ ****';
     }
   };
 
@@ -159,12 +253,114 @@ export default function HomeScreen() {
           styles.amountText,
           { color: transaction.type === 'CREDIT' ? '#4CAF50' : '#F44336' }
         ]}>
-          {transaction.type === 'CREDIT' ? '+' : '-'}{formatCurrency(transaction.amount)}
+          {isBalanceVisible
+            ? `${transaction.type === 'CREDIT' ? '+' : '-'}${formatCurrency(transaction.amount)}`
+            : `${transaction.type === 'CREDIT' ? '+' : '-'}GH₵ ****`
+          }
         </Text>
         <Text style={styles.transactionStatus}>{transaction.status}</Text>
       </View>
     </TouchableOpacity>
   );
+
+  const renderApplicationStatus = () => {
+    const appStatus = getApplicationStatus();
+    if (!appStatus) return null;
+
+    return (
+      <View style={styles.applicationStatusContainer}>
+        <View style={styles.applicationStatusCard}>
+          <View style={styles.applicationStatusHeader}>
+            <Ionicons name="document-text" size={20} color={appStatus.color} />
+            <Text style={styles.applicationStatusTitle}>Application Status</Text>
+          </View>
+          <View style={styles.applicationStatusContent}>
+            <Text style={[styles.applicationStatusText, { color: appStatus.color }]}>
+              {appStatus.status.replace('_', ' ')}
+            </Text>
+            <Text style={styles.applicationStatusDescription}>
+              {appStatus.status === 'PENDING' && 'Your application is being reviewed'}
+              {appStatus.status === 'DOCUMENTS_SUBMITTED' && 'Documents received, under review'}
+              {appStatus.status === 'APPROVED' && 'Your account is ready to use'}
+              {appStatus.status === 'REJECTED' && 'Please contact support for assistance'}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="refresh" size={40} color="#411D4B" />
+          <Text style={styles.loadingText}>Loading your account...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Add this component to your HomeScreen file
+  const HorizontalServicesList = () => {
+
+    const router = useRouter();
+
+    // ✅ Define your services array using the correct type
+    const services: Service[] = [
+      { id: '1', title: 'Contact Us', icon: 'call-outline', color: '#4CAF50' },
+      { id: '2', title: 'Refer and Earn', icon: 'people-outline', color: '#FF9800' },
+      { id: '3', title: 'Request a Statement', icon: 'document-text-outline', color: '#2196F3' },
+    ];
+
+    const handleServicePress = (serviceId: string, title: string) => {
+      switch (serviceId) {
+        case '1':
+          console.log('Navigating to /(screens)/contact-us');
+          router.push('../../(screens)/contact-us');
+
+
+          break;
+        case '2':
+          Alert.alert('Refer and Earn', 'Share your referral code and earn rewards!');
+          break;
+        case '3':
+          Alert.alert('Request Statement', 'Your statement will be sent to your registered email address.');
+          break;
+        default:
+          Alert.alert('Coming Soon', `${title} feature will be available soon`);
+      }
+    };
+
+    // ✅ Tell TypeScript that item is of type Service
+    const renderServiceItem = ({ item }: { item: Service }) => (
+      <TouchableOpacity
+        style={styles.serviceItem}
+        onPress={() => handleServicePress(item.id, item.title)}
+      >
+        <View style={[styles.serviceIconContainer, { backgroundColor: item.color }]}>
+          <Ionicons name={item.icon as any} size={24} color="white" />
+        </View>
+        <Text style={styles.serviceText}>{item.title}</Text>
+      </TouchableOpacity>
+    );
+
+    return (
+      <View style={styles.container}>
+        <Text style={styles.sectionTitle}>More Services</Text>
+        <FlatList
+          data={services}
+          renderItem={renderServiceItem}
+          keyExtractor={(item) => item.id}
+          horizontal={true}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.flatListContent}
+          style={styles.flatListContainer}
+        />
+      </View>
+    );
+  };
+
 
   return (
     <SafeAreaView style={styles.container}>
@@ -174,41 +370,62 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
+        <ImageBackground
+          source={require('../../assets/images/relafinlogo.png')}
+          style={styles.contain}>
+          {/* Header */}
           <View>
-            <Text style={styles.greeting}>Good Morning</Text>
-            <Text style={styles.name}>{phoneNumber}</Text>
+            <View style={styles.header}>
+              <View>
+                <Text style={styles.greeting}>{getGreeting()}</Text>
+                <Text style={styles.name}>{getUserDisplayName()}</Text>
+              </View>
+              <TouchableOpacity style={styles.notificationButton}>
+                <Ionicons name="notifications-outline" size={24} color="#411D4B" />
+              </TouchableOpacity>
+            </View>
+
+
+            {/* Balance Card */}
+            <View style={styles.balanceCard}>
+              <Text style={styles.balanceLabel}>Available Balance</Text>
+              <View style={styles.balanceAmountRow}>
+                <Text style={styles.balanceAmount}>{getDisplayBalance()}</Text>
+                <TouchableOpacity style={styles.eyeButton}
+                  onPress={toggleBalanceVisibility}>
+                  <Ionicons name={isBalanceVisible ? 'eye-outline' : 'eye-off-outline'} size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <View style={styles.balanceActions}>
+                <TouchableOpacity
+                  style={styles.balanceActionButton}
+                  onPress={() => handleQuickAction('3')}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color="white" />
+                  <Text style={styles.balanceActionText}>Top Up</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.balanceActionButton}
+                  onPress={() => handleQuickAction('2')}
+                >
+                  <Ionicons name="arrow-up-circle-outline" size={20} color="white" />
+                  <Text style={styles.balanceActionText}>Withdraw</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons name="notifications-outline" size={24} color="#411D4B" />
-          </TouchableOpacity>
+
+        </ImageBackground>
+
+        {/* Application Status */}
+        {renderApplicationStatus()}
+
+        <View style={styles.quickActionContainer}>
+          {/* Quick Actions */}
+          {renderQuickActions()}
         </View>
 
-        {/* Balance Card */}
-        <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>Available Balance</Text>
-          <Text style={styles.balanceAmount}>{formatCurrency(balance)}</Text>
-          <View style={styles.balanceActions}>
-            <TouchableOpacity
-              style={styles.balanceActionButton}
-              onPress={() => handleQuickAction('3')}
-            >
-              <Ionicons name="add-circle-outline" size={20} color="white" />
-              <Text style={styles.balanceActionText}>Top Up</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.balanceActionButton}
-              onPress={() => handleQuickAction('2')}
-            >
-              <Ionicons name="arrow-up-circle-outline" size={20} color="white" />
-              <Text style={styles.balanceActionText}>Withdraw</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Quick Actions */}
-        {renderQuickActions()}
+        {HorizontalServicesList()}
 
         {/* Recent Transactions */}
         <View style={styles.transactionsContainer}>
@@ -218,8 +435,18 @@ export default function HomeScreen() {
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
-          {transactions.map(renderTransaction)}
+          {transactions.length > 0 ? (
+            transactions.map(renderTransaction)
+          ) : (
+            <View style={styles.emptyTransactions}>
+              <Ionicons name="receipt-outline" size={40} color="#ccc" />
+              <Text style={styles.emptyTransactionsText}>No transactions yet</Text>
+            </View>
+          )}
         </View>
+
+
+
 
         {/* Promotional Banner */}
         <View style={styles.promoBanner}>
@@ -241,218 +468,262 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-  },
-  greeting: {
-    fontSize: 16,
-    color: '#666',
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#411D4B',
-  },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  balanceCard: {
-    margin: 20,
-    padding: 20,
-    backgroundColor: '#411D4B',
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  balanceLabel: {
-    fontSize: 16,
-    color: '#fff',
-    opacity: 0.8,
-  },
-  balanceAmount: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginVertical: 10,
-  },
-  balanceActions: {
-    flexDirection: 'row',
-    marginTop: 20,
-    gap: 10,
-  },
-  balanceActionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    gap: 5,
-  },
-  balanceActionText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  quickActionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  quickActionButton: {
-    alignItems: 'center',
-    width: (width - 60) / 4,
-  },
-  quickActionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  quickActionText: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-  },
-  transactionsContainer: {
-    padding: 20,
-  },
-  transactionsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  transactionsTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#411D4B',
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: '#411D4B',
-  },
-  transactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
+const getStyles = (isDarkMode: boolean) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: isDarkMode ? '#000' : '#fff',
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  transactionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  transactionDetails: {
-    flex: 1,
-  },
-  transactionDescription: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#411D4B',
-    marginBottom: 4,
-  },
-  transactionDate: {
-    fontSize: 14,
-    color: '#666',
-  },
-  transactionAmount: {
-    alignItems: 'flex-end',
-  },
-  amountText: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  transactionStatus: {
-    fontSize: 12,
-    color: '#666',
-  },
-  promoBanner: {
-    margin: 20,
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
+    scrollView: {
+      flex: 1,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  promoContent: {
-    flex: 1,
-  },
-  promoTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#411D4B',
-    marginBottom: 8,
-  },
-  promoDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
-  },
-  promoButton: {
-    backgroundColor: '#411D4B',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    alignSelf: 'flex-start',
-  },
-  promoButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  promoImage: {
-    width: 100,
-    height: 100,
-  },
-});
+    header: {
+      padding: 20,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    greeting: {
+      fontSize: 16,
+      color: isDarkMode ? '#ccc' : '#666',
+    },
+    name: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: isDarkMode ? '#fff' : '#411D4B',
+    },
+    notificationButton: {
+      backgroundColor: isDarkMode ? '#222' : '#f0f0f0',
+      padding: 8,
+      borderRadius: 20,
+    },
+    balanceCard: {
+      backgroundColor: isDarkMode ? '#1a1a1a' : '#411D4B',
+      margin: 20,
+      borderRadius: 12,
+      padding: 20,
+    },
+    balanceLabel: {
+      fontSize: 14,
+      color: isDarkMode ? '#aaa' : '#fff',
+    },
+    balanceAmountRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 8,
+    },
+    balanceAmount: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: '#fff',
+    },
+    eyeButton: {
+      marginLeft: 10,
+    },
+    balanceActions: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 16,
+    },
+    balanceActionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#6200EE',
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+    },
+    balanceActionText: {
+      color: '#fff',
+      marginLeft: 6,
+    },
+    applicationStatusContainer: {
+      padding: 16,
+    },
+    applicationStatusCard: {
+      backgroundColor: isDarkMode ? '#111' : '#f0f0f0',
+      borderRadius: 12,
+      padding: 16,
+    },
+    applicationStatusHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    applicationStatusTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      marginLeft: 8,
+      color: isDarkMode ? '#fff' : '#411D4B',
+    },
+    applicationStatusContent: {
+      marginTop: 10,
+    },
+    applicationStatusText: {
+      fontSize: 14,
+      fontWeight: 'bold',
+    },
+    applicationStatusDescription: {
+      fontSize: 13,
+      color: isDarkMode ? '#aaa' : '#666',
+    },
+    quickActionContainer: {
+      padding: 16,
+    },
+    quickActionsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      marginBottom: 10,
+    },
+    quickActionButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    quickActionIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    quickActionText: {
+      marginTop: 4,
+      fontSize: 12,
+      color: isDarkMode ? '#ccc' : '#333',
+    },
+    transactionsContainer: {
+      padding: 16,
+    },
+    transactionsHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    transactionsTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: isDarkMode ? '#fff' : '#411D4B',
+    },
+    viewAllText: {
+      fontSize: 14,
+      color: isDarkMode ? '#aaa' : '#411D4B',
+    },
+    transactionItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    transactionIcon: {
+      marginRight: 10,
+    },
+    transactionDetails: {
+      flex: 1,
+    },
+    transactionDescription: {
+      fontSize: 14,
+      color: isDarkMode ? '#fff' : '#333',
+    },
+    transactionDate: {
+      fontSize: 12,
+      color: isDarkMode ? '#aaa' : '#999',
+    },
+    transactionAmount: {
+      alignItems: 'flex-end',
+    },
+    amountText: {
+      fontSize: 14,
+      fontWeight: 'bold',
+    },
+    transactionStatus: {
+      fontSize: 12,
+      color: isDarkMode ? '#ccc' : '#666',
+    },
+    emptyTransactions: {
+      alignItems: 'center',
+      paddingVertical: 40,
+    },
+    emptyTransactionsText: {
+      fontSize: 16,
+      color: '#ccc',
+      marginTop: 8,
+    },
+    promoBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      backgroundColor: isDarkMode ? '#222' : '#f5f5f5',
+      borderRadius: 12,
+      margin: 20,
+    },
+    promoContent: {
+      flex: 1,
+    },
+    promoTitle: {
+      fontSize: 16,
+      fontWeight: 'bold',
+      color: isDarkMode ? '#fff' : '#411D4B',
+    },
+    promoDescription: {
+      fontSize: 14,
+      color: isDarkMode ? '#ccc' : '#666',
+      marginBottom: 10,
+    },
+    promoButton: {
+      backgroundColor: '#6200EE',
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 6,
+    },
+    promoButtonText: {
+      color: '#fff',
+      fontSize: 14,
+    },
+    promoImage: {
+      width: 80,
+      height: 80,
+      marginLeft: 10,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      fontSize: 16,
+      color: isDarkMode ? '#fff' : '#411D4B',
+      marginTop: 16,
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      color: isDarkMode ? '#fff' : '#411D4B',
+      marginBottom: 10,
+      marginLeft: 16,
+    },
+    flatListContainer: {
+      paddingHorizontal: 16,
+    },
+    flatListContent: {
+      gap: 10,
+    },
+    serviceItem: {
+      alignItems: 'center',
+      marginRight: 16,
+    },
+    serviceIconContainer: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 6,
+    },
+    serviceText: {
+      fontSize: 12,
+      color: isDarkMode ? '#ccc' : '#333',
+    },
+    contain: {
+      paddingBottom: 10,
+    },
+  });

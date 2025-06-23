@@ -3,9 +3,11 @@ import { StyleSheet, Text, View, SafeAreaView, ScrollView, TouchableOpacity, Pla
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 
+
 const { height } = Dimensions.get('window');
 
 export default function ContactUsScreen() {
+
   const router = useRouter();
   const [message, setMessage] = useState('');
 

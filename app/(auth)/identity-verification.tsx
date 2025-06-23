@@ -5,15 +5,34 @@ import { StyleSheet, Text, TouchableOpacity, View, ScrollView, SafeAreaView } fr
 import { useApplication } from '../../context/ApplicationContext';
 
 export default function IdentityVerificationScreen() {
+  const { setLastAuthStep, applicationData } = useApplication();
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { applicationData } = useApplication();
 
-  // Log the received data for debugging
+  useEffect(() => {
+    setLastAuthStep('identity-verification'); // this identifies the current step
+  }, []);
+
   useEffect(() => {
     console.log('Received params:', params);
     console.log('Application data:', applicationData);
   }, [params, applicationData]);
+
+  // ✅ Guard clause: handle missing personalInfo
+  if (!applicationData?.personalInfo) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ color: '#DC2626', fontSize: 16, textAlign: 'center' }}>
+            Missing personal information. Please restart the process.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ✅ Safe destructure
+  const { fullName, dateOfBirth, email, phone } = applicationData.personalInfo;
 
   const handleContinue = () => {
     router.push('/document-capture');
@@ -34,21 +53,21 @@ export default function IdentityVerificationScreen() {
           <Text style={styles.infoTitle}>Personal Information</Text>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Full Name:</Text>
-            <Text style={styles.infoValue}>{applicationData.personalInfo.fullName}</Text>
+            <Text style={styles.infoValue}>{fullName}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Date of Birth:</Text>
             <Text style={styles.infoValue}>
-              {new Date(applicationData.personalInfo.dateOfBirth).toLocaleDateString()}
+              {new Date(dateOfBirth).toLocaleDateString()}
             </Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Email:</Text>
-            <Text style={styles.infoValue}>{applicationData.personalInfo.email}</Text>
+            <Text style={styles.infoValue}>{email}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Phone:</Text>
-            <Text style={styles.infoValue}>{applicationData.personalInfo.phone}</Text>
+            <Text style={styles.infoValue}>{phone}</Text>
           </View>
         </View>
 

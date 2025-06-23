@@ -1,42 +1,30 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Platform, StatusBar } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  SafeAreaView,
+  TouchableOpacity,
+  Platform,
+  StatusBar,
+  Alert,
+  RefreshControl,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const loanProducts = [
-  {
-    id: '1',
-    title: 'Personal Loan',
-    description: 'Quick access to funds for personal needs',
-    interestRate: '15%',
-    term: '12 months',
-    maxAmount: 'GHS 10,000',
-    icon: 'cash-outline',
-  },
-  {
-    id: '2',
-    title: 'Business Loan',
-    description: 'Grow your business with flexible financing',
-    interestRate: '12%',
-    term: '24 months',
-    maxAmount: 'GHS 50,000',
-    icon: 'business-outline',
-  },
-  {
-    id: '3',
-    title: 'Education Loan',
-    description: 'Invest in your future with education financing',
-    interestRate: '10%',
-    term: '36 months',
-    maxAmount: 'GHS 30,000',
-    icon: 'school-outline',
-  },
-];
+import { fetchMockLoanProducts, LoanProduct } from '../../services/mockApi';
+import { useTheme } from '@/context/ThemeContext'; // 👈 make sure path is correct
 
 export default function LoansScreen() {
   const router = useRouter();
+  const { colors, theme } = useTheme(); // 👈 get theme values
+
   const [userData, setUserData] = React.useState<any>(null);
+  const [loanProducts, setLoanProducts] = React.useState<LoanProduct[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
 
   React.useEffect(() => {
     loadUserData();
@@ -44,68 +32,135 @@ export default function LoansScreen() {
 
   const loadUserData = async () => {
     try {
+      setLoading(true);
       const data = await AsyncStorage.getItem('userData');
-      if (data) {
-        setUserData(JSON.parse(data));
-      }
+      const phoneNumber = await AsyncStorage.getItem('phoneNumber');
+
+      if (data) setUserData(JSON.parse(data));
+      if (phoneNumber) await fetchLoanProducts(phoneNumber);
     } catch (error) {
       console.error('Error loading user data:', error);
+      Alert.alert('Error', 'Failed to load loan products');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleLoanPress = (loanId: string) => {
-    // TODO: Implement loan application flow
-    console.log('Selected loan:', loanId);
+  const fetchLoanProducts = async (phone: string) => {
+    try {
+      const productsData = await fetchMockLoanProducts(phone);
+      setLoanProducts(productsData);
+    } catch (error) {
+      console.error('Error fetching loan products:', error);
+      Alert.alert('Error', 'Failed to fetch loan products');
+    }
   };
 
-  const renderLoanProduct = (loan: typeof loanProducts[0]) => (
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const phoneNumber = await AsyncStorage.getItem('phoneNumber');
+      if (phoneNumber) await fetchLoanProducts(phoneNumber);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      Alert.alert('Error', 'Failed to refresh data');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleLoanPress = (loan: LoanProduct) => {
+    if (!loan.isEligible) {
+      Alert.alert('Not Eligible', loan.eligibilityReason || 'You are not eligible for this loan product.');
+      return;
+    }
+
+    Alert.alert('Coming Soon', `Loan application for ${loan.title} will be available soon`);
+  };
+
+  const renderLoanProduct = (loan: LoanProduct) => (
     <TouchableOpacity
       key={loan.id}
-      style={styles.loanCard}
-      onPress={() => handleLoanPress(loan.id)}
+      style={[
+        styles.loanCard,
+        { backgroundColor: colors.card },
+        !loan.isEligible && styles.loanCardDisabled,
+      ]}
+      onPress={() => handleLoanPress(loan)}
     >
-      <View style={styles.loanIconContainer}>
-        <Ionicons name={loan.icon as any} size={32} color="#411D4B" />
+      <View style={[styles.loanIconContainer, { backgroundColor: theme === 'dark' ? '#222' : '#F5F5F5' }]}>
+        <Ionicons name={loan.icon as any} size={32} color={colors.icon} />
       </View>
       <View style={styles.loanInfo}>
-        <Text style={styles.loanTitle}>{loan.title}</Text>
-        <Text style={styles.loanDescription}>{loan.description}</Text>
+        <View style={styles.loanHeader}>
+          <Text style={[styles.loanTitle, { color: colors.text }]}>{loan.title}</Text>
+          {!loan.isEligible && (
+            <View style={styles.eligibilityBadge}>
+              <Text style={styles.eligibilityText}>Not Eligible</Text>
+            </View>
+          )}
+        </View>
+        <Text style={[styles.loanDescription, { color: colors.text }]}>{loan.description}</Text>
         <View style={styles.loanDetails}>
           <View style={styles.loanDetail}>
             <Text style={styles.loanDetailLabel}>Interest Rate</Text>
-            <Text style={styles.loanDetailValue}>{loan.interestRate}</Text>
+            <Text style={[styles.loanDetailValue, { color: colors.text }]}>{loan.interestRate}</Text>
           </View>
           <View style={styles.loanDetail}>
             <Text style={styles.loanDetailLabel}>Term</Text>
-            <Text style={styles.loanDetailValue}>{loan.term}</Text>
+            <Text style={[styles.loanDetailValue, { color: colors.text }]}>{loan.term}</Text>
           </View>
           <View style={styles.loanDetail}>
             <Text style={styles.loanDetailLabel}>Max Amount</Text>
-            <Text style={styles.loanDetailValue}>{loan.maxAmount}</Text>
+            <Text style={[styles.loanDetailValue, { color: colors.text }]}>{loan.maxAmount}</Text>
           </View>
         </View>
+        {!loan.isEligible && loan.eligibilityReason && (
+          <Text style={[styles.eligibilityReason, { color: colors.text }]}>{loan.eligibilityReason}</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
 
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.loadingContainer}>
+          <Ionicons name="refresh" size={40} color={colors.icon} />
+          <Text style={[styles.loadingText, { color: colors.text }]}>Loading loan products...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <ScrollView style={styles.scrollView}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         <View style={styles.header}>
-          <Text style={styles.title}>Loans</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.title, { color: colors.text }]}>Loans</Text>
+          <Text style={[styles.subtitle, { color: colors.text }]}>
             Choose from our range of loan products
           </Text>
         </View>
 
         <View style={styles.loanProductsContainer}>
-          {loanProducts.map(renderLoanProduct)}
+          {loanProducts.length > 0 ? (
+            loanProducts.map(renderLoanProduct)
+          ) : (
+            <View style={styles.emptyLoans}>
+              <Ionicons name="cash-outline" size={40} color="#ccc" />
+              <Text style={[styles.emptyLoansText, { color: colors.text }]}>No loan products available</Text>
+            </View>
+          )}
         </View>
 
-        <View style={styles.infoCard}>
-          <Ionicons name="information-circle-outline" size={24} color="#411D4B" />
-          <Text style={styles.infoText}>
+        <View style={[styles.infoCard, { backgroundColor: theme === 'dark' ? '#222' : '#F5F5F5' }]}>
+          <Ionicons name="information-circle-outline" size={24} color={colors.icon} />
+          <Text style={[styles.infoText, { color: colors.text }]}>
             Need help choosing a loan? Contact our support team for personalized assistance.
           </Text>
         </View>
@@ -113,6 +168,7 @@ export default function LoansScreen() {
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -204,9 +260,55 @@ const styles = StyleSheet.create({
   },
   infoText: {
     flex: 1,
-    marginLeft: 12,
     fontSize: 14,
     color: '#666',
+    marginLeft: 12,
     lineHeight: 20,
+  },
+  // New styles for enhanced loan functionality
+  loanCardDisabled: {
+    opacity: 0.6,
+  },
+  loanHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  eligibilityBadge: {
+    backgroundColor: '#FFEBEE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  eligibilityText: {
+    fontSize: 10,
+    color: '#C62828',
+    fontWeight: '600',
+  },
+  eligibilityReason: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#411D4B',
+    marginTop: 16,
+  },
+  emptyLoans: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyLoansText: {
+    fontSize: 16,
+    color: '#ccc',
+    marginTop: 8,
   },
 }); 

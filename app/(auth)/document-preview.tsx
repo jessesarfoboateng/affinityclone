@@ -24,6 +24,14 @@ type DocumentPreviewStyles = {
 };
 
 export default function DocumentPreviewScreen() {
+
+  const { setLastAuthStep } = useApplication();
+
+  useEffect(() => {
+    setLastAuthStep('document-preview'); // this identifies the current step
+  }, []);
+
+
   const router = useRouter();
   const { applicationData } = useApplication();
   const [isSubmitting, setIsSubmitting] = React.useState(false);

@@ -1,45 +1,82 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, KeyboardAvoidingView, Platform, SafeAreaView, Dimensions, Linking } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useApplication } from '@/context/ApplicationContext';
+import React, {useEffect} from 'react';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  Dimensions,
+} from 'react-native';
 import Checkbox from 'expo-checkbox';
 
 export default function ConfirmRegistrationScreen() {
+
+  const { setLastAuthStep } = useApplication();
+
+  useEffect(() => {
+    setLastAuthStep('confirm-registration'); // this identifies the current step
+  }, []);
+
+
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
   const params = useLocalSearchParams();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
   const [showTermsError, setShowTermsError] = useState(false);
 
-  // Get registration details from params
   const {
     title,
     firstName,
     otherName,
     lastName,
     referralCode,
+    phoneNumber,
   } = params;
+
+  if (!firstName || !lastName || !phoneNumber) {
+    alert('Some registration details are missing. Please go back and try again.');
+    router.back();
+    return null;
+  }
 
   const handleConfirm = async () => {
     if (!acceptedTerms) {
       setShowTermsError(true);
       return;
     }
+
     setShowTermsError(false);
-    // TODO: Implement registration confirmation logic
-    router.push('/setup-pin?' + new URLSearchParams({
+    setLoading(true);
+
+    await AsyncStorage.setItem('hasAcceptedTerms', 'true');
+    await AsyncStorage.setItem('marketingConsent', marketingConsent.toString());
+
+    const query = new URLSearchParams({
       firstName: firstName as string,
       lastName: lastName as string,
-      phoneNumber: params.phoneNumber as string
-    }).toString());
+      phoneNumber: phoneNumber as string,
+      marketingConsent: marketingConsent.toString(),
+    }).toString();
+
+    router.push(`/setup-pin?${query}`);
   };
 
   const handleEdit = () => {
     router.back();
   };
 
-  const handleTermsPress = () => {
-    router.push('/legal-docs');
+  const handleTermsPress = (section: 'terms' | 'privacy') => {
+    router.push(`/legal-docs?section=${section}`);
   };
 
   return (
@@ -54,9 +91,7 @@ export default function ConfirmRegistrationScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.detailsContainer}>
-            <Text style={styles.subtitle}>
-              Confirm Registration Details
-            </Text>
+            <Text style={styles.subtitle}>Confirm Registration Details</Text>
 
             <View style={styles.detailsList}>
               <View style={styles.detailItem}>
@@ -101,9 +136,12 @@ export default function ConfirmRegistrationScreen() {
               />
               <Text style={styles.checkboxLabel}>
                 I have read, understood and accepted Relafin's{' '}
-                <Text style={styles.termsLink} onPress={handleTermsPress}>Terms and Conditions</Text>
-                {' '}and{' '}
-                <Text style={styles.termsLink} onPress={handleTermsPress}>Privacy Policy</Text>
+                <Text style={styles.termsLink} onPress={() => handleTermsPress('terms')}>
+                  Terms and Conditions
+                </Text>{' '}and{' '}
+                <Text style={styles.termsLink} onPress={() => handleTermsPress('privacy')}>
+                  Privacy Policy
+                </Text>.
               </Text>
             </View>
             {showTermsError && (
@@ -128,22 +166,17 @@ export default function ConfirmRegistrationScreen() {
         </ScrollView>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleEdit}
-          >
-            <Text style={styles.backButtonText}>
-              Back
-            </Text>
+          <TouchableOpacity style={styles.backButton} onPress={handleEdit}>
+            <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.confirmButton, !acceptedTerms && styles.confirmButtonDisabled]}
             onPress={handleConfirm}
-            disabled={!acceptedTerms}
+            disabled={!acceptedTerms || loading}
           >
             <Text style={styles.buttonText}>
-              Confirm
+              {loading ? 'Confirming...' : 'Confirm'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -283,4 +316,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
   },
-}); 
+});

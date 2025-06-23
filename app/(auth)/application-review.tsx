@@ -55,29 +55,65 @@ type ApplicationReviewStyles = {
 };
 
 export default function ApplicationReviewScreen() {
+
+  const { setLastAuthStep } = useApplication();
+
+  useEffect(() => {
+    setLastAuthStep('application-review'); // this identifies the current step
+  }, []);
+
+
   const router = useRouter();
   const { applicationData } = useApplication();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const handleBack = () => {
-    router.back();
+    router.back(); // or router.replace('/somewhere')
   };
+
 
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
-      // Simulate API call
+
+      // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Get phone number from app context or state
-      const { personalInfo } = applicationData; // or wherever it's stored
+      const { personalInfo, identityInfo } = applicationData;
       const phone = personalInfo?.phone;
 
       if (!phone) {
         throw new Error('Phone number is missing when navigating to success screen.');
       }
 
-      router.push(`/success?phone=${phone}`);
+      // ✅ Construct a mock userData object to send to SuccessScreen
+      const userData = {
+        token: 'mock-auth-token',
+        user: {
+          id: 123, // You can update this with actual ID from server
+          phoneNumber: phone,
+          isPinSet: true,
+          application: {
+            id: 1,
+            status: 'approved',
+            ghanaCardNumber: identityInfo.ghanaCardNumber,
+            personalInfo: {
+              firstName: personalInfo.fullName.split(' ')[0] || '',
+              lastName: personalInfo.fullName.split(' ')[1] || '',
+              dateOfBirth: personalInfo.dateOfBirth,
+              gender: 'Male', // Optional: Replace if available
+              address: personalInfo.address,
+              city: 'Accra',
+              region: 'Greater Accra',
+            },
+          },
+        },
+      };
+
+      // ✅ Navigate with both phone and userData
+      router.push(
+        `/success?phone=${encodeURIComponent(phone)}&userData=${encodeURIComponent(JSON.stringify(userData))}`
+      );
 
 
     } catch (error) {
@@ -87,7 +123,6 @@ export default function ApplicationReviewScreen() {
       setIsSubmitting(false);
     }
   };
-
 
   return (
     <SafeAreaView style={styles.container}>

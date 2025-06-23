@@ -20,6 +20,8 @@ interface ApplicationContextType {
   hasCompletedOnboarding: boolean;
   loaded: boolean;
   applicationData: ApplicationData;
+  lastAuthStep: string | null;
+  setLastAuthStep: (step: string) => void;
   setAuthenticated: (value: boolean) => void;
   setFirstTimeUser: (value: boolean) => void;
   setCompletedOnboarding: (value: boolean) => void;
@@ -40,6 +42,14 @@ export function ApplicationProvider({ children }: ApplicationProviderProps) {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [applicationData, setApplicationData] = useState<ApplicationData>({});
+  const [lastAuthStep, setLastAuthStepState] = useState<string | null>(null);
+
+  const setLastAuthStep = async (step: string) => {
+    console.log('🧭 Saving last auth step: ', step);
+    setLastAuthStepState(step);
+    await AsyncStorage.setItem('lastAuthStep', step);
+  };
+
 
   // Initialize app state from AsyncStorage
   useEffect(() => {
@@ -47,22 +57,33 @@ export function ApplicationProvider({ children }: ApplicationProviderProps) {
       try {
         console.log('🚀 Initializing app state...');
 
+        const lastStep = await AsyncStorage.getItem('lastAuthStep');
+        setLastAuthStepState(lastStep);
+
+
         const [
           hasSeenOnboarding,
           userToken,
           registrationComplete,
-          storedApplicationData
+          storedApplicationData,
+          storedPhoneNumber,
+          savedLastAuthStep
         ] = await Promise.all([
           AsyncStorage.getItem('hasSeenOnboarding'),
           AsyncStorage.getItem('userToken'),
           AsyncStorage.getItem('registrationComplete'),
-          AsyncStorage.getItem('applicationData')
+          AsyncStorage.getItem('applicationData'),
+          AsyncStorage.getItem('phoneNumber'),
+          AsyncStorage.getItem('lastAuthStep')
         ]);
+
+        setLastAuthStepState(savedLastAuthStep);
 
         console.log('📱 App state loaded:', {
           hasSeenOnboarding,
           userToken: userToken ? 'exists' : 'null',
-          registrationComplete
+          registrationComplete,
+          storedPhoneNumber
         });
 
         // Set state based on stored values
@@ -73,9 +94,18 @@ export function ApplicationProvider({ children }: ApplicationProviderProps) {
         setIsFirstTimeUser(!hasOnboarded);
         setIsAuthenticated(isAuth);
 
-        if (storedApplicationData) {
-          setApplicationData(JSON.parse(storedApplicationData));
+        let parsedData = storedApplicationData ? JSON.parse(storedApplicationData) : {};
+        if (storedPhoneNumber) {
+          parsedData = {
+            ...parsedData,
+            personalInfo: {
+              ...(parsedData.personalInfo || {}),
+              phone: storedPhoneNumber
+            }
+          };
         }
+
+        setApplicationData(parsedData);
 
         console.log('✅ App state initialized:', {
           isFirstTimeUser: !hasOnboarded,
@@ -85,7 +115,6 @@ export function ApplicationProvider({ children }: ApplicationProviderProps) {
 
       } catch (error) {
         console.error('❌ Error initializing app state:', error);
-        // Default to first-time user on error
         setIsFirstTimeUser(true);
         setHasCompletedOnboarding(false);
         setIsAuthenticated(false);
@@ -169,12 +198,16 @@ export function ApplicationProvider({ children }: ApplicationProviderProps) {
     hasCompletedOnboarding,
     loaded,
     applicationData,
+    lastAuthStep,
+    setLastAuthStep,
     setAuthenticated,
     setFirstTimeUser,
     setCompletedOnboarding,
     setApplicationData: updateApplicationData,
     signOut,
     completeRegistration
+
+
   };
 
   return (

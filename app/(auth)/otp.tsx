@@ -1,35 +1,76 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView, KeyboardAvoidingView, Platform, Dimensions, Alert, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  Dimensions,
+  Alert,
+  ActivityIndicator,
+} from 'react-native';
 import { useApplication } from '../../context/ApplicationContext';
 
 export default function OTPScreen() {
+
+  const { setLastAuthStep } = useApplication();
+
+  useEffect(() => {
+    setLastAuthStep('otp'); // this identifies the current step
+  }, []);
+
+
+
   const router = useRouter();
-  const { phoneNumber } = useLocalSearchParams();
   const { setAuthenticated } = useApplication();
   const [otp, setOtp] = useState(['', '', '', '']);
   const [countdown, setCountdown] = useState(60);
   const [isLoading, setIsLoading] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
+    const fetchPhoneNumber = async () => {
+      try {
+        const storedNumber = await AsyncStorage.getItem('phoneNumber');
+        if (!storedNumber) {
+          Alert.alert('Error', 'No phone number found. Please go back and re-enter.');
+          router.replace('/auth/phone');
+        } else {
+          setPhoneNumber(storedNumber);
+        }
+      } catch (error) {
+        console.error('Error loading phone number:', error);
+      }
+    };
+
+    fetchPhoneNumber();
+  }, []);
+
+  useEffect(() => {
+    let timeout: ReturnType<typeof setInterval>;
+  
     if (countdown > 0) {
       timeout = setInterval(() => {
         setCountdown((prev) => prev - 1);
-      }, 1000) as unknown as NodeJS.Timeout;
+      }, 1000);
     }
+  
     return () => clearInterval(timeout);
   }, [countdown]);
+  
 
   const handleOtpChange = (text: string, index: number) => {
     const newOtp = [...otp];
     newOtp[index] = text;
     setOtp(newOtp);
 
-    // Auto-focus next input
     if (text && index < 3) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -40,14 +81,8 @@ export default function OTPScreen() {
 
     try {
       setIsLoading(true);
-      // TODO: Replace with actual API call
-      // const response = await fetch('YOUR_API_URL/api/auth/resend-otp', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ phoneNumber: `+233${phoneNumber}` })
-      // });
 
-      // For now, simulate API call
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       setCountdown(60);
@@ -70,26 +105,12 @@ export default function OTPScreen() {
     try {
       setIsLoading(true);
 
-      // TODO: Replace with actual API call
-      // const response = await fetch('YOUR_API_URL/api/auth/verify-otp', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ 
-      //     phoneNumber: `+233${phoneNumber}`,
-      //     otp: otpString
-      //   })
-      // });
-      // const data = await response.json();
-
-      // For now, simulate successful OTP verification
-      const otpIsValid = true; // ✅ Define this variable
+      // Simulate verification
+      const otpIsValid = true;
 
       if (otpIsValid) {
-        // OTP verified, continue to registration
-        router.push(`/register?phoneNumber=${phoneNumber}`);
-        // DON'T call setAuthenticated(true) here
+        router.push('/register');
       } else {
-        // OTP invalid, show error
         Alert.alert('Invalid OTP', 'Please try again');
       }
     } catch (error) {
@@ -106,19 +127,15 @@ export default function OTPScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.container}
       >
-        {/* OTP Icon */}
         <View style={styles.iconContainer}>
           <Ionicons name="keypad-outline" size={100} color="#411D4B" />
         </View>
 
-        {/* Content */}
         <View style={styles.fillZoneContainer}>
-          <Text style={styles.enterOtpText}>
-            Enter OTP
-          </Text>
+          <Text style={styles.enterOtpText}>Enter OTP</Text>
 
           <Text style={styles.otpDescription}>
-            We have sent a 4-digit code to your phone number
+            We have sent a 4-digit code to {phoneNumber ? `+233${phoneNumber}` : 'your phone'}
           </Text>
 
           <View style={styles.otpContainer}>
@@ -148,9 +165,7 @@ export default function OTPScreen() {
                 <ActivityIndicator color="white" size="small" />
               ) : (
                 <>
-                  <Text style={styles.verifyText}>
-                    Verify
-                  </Text>
+                  <Text style={styles.verifyText}>Verify</Text>
                   <Ionicons name="arrow-forward" size={24} color="white" />
                 </>
               )}
@@ -158,17 +173,17 @@ export default function OTPScreen() {
           </TouchableOpacity>
 
           <View style={styles.resendContainer}>
-            <Text style={styles.resendText}>
-              Didn't receive the code?{' '}
-            </Text>
+            <Text style={styles.resendText}>Didn't receive the code? </Text>
             <TouchableOpacity
               onPress={handleResendOtp}
               disabled={countdown > 0 || isLoading}
             >
-              <Text style={[
-                styles.resendLink,
-                (countdown > 0 || isLoading) && styles.resendLinkDisabled
-              ]}>
+              <Text
+                style={[
+                  styles.resendLink,
+                  (countdown > 0 || isLoading) && styles.resendLinkDisabled,
+                ]}
+              >
                 Resend {countdown > 0 ? `(${countdown}s)` : ''}
               </Text>
             </TouchableOpacity>
@@ -283,4 +298,4 @@ const styles = StyleSheet.create({
   resendLinkDisabled: {
     opacity: 0.5,
   },
-}); 
+});

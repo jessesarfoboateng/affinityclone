@@ -1,7 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, KeyboardAvoidingView, Platform, SafeAreaView, Dimensions } from 'react-native';
+import { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useApplication } from '@/context/ApplicationContext';
+import { getTempData, saveTempData, clearTempData } from '@/utils/tempStorage';
+
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  Dimensions,
+} from 'react-native';
 
 interface FormData {
   title: string;
@@ -12,8 +27,32 @@ interface FormData {
 }
 
 export default function RegisterScreen() {
+  const { setLastAuthStep } = useApplication();
+
+  useEffect(() => {
+    setLastAuthStep('register');
+  }, []);
+
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchPhoneNumber = async () => {
+      try {
+        const storedPhone = await AsyncStorage.getItem('phoneNumber');
+        if (!storedPhone) {
+          alert('No phone number found. Please go back and re-enter.');
+          router.replace('/auth/phone');
+        } else {
+          setPhoneNumber(storedPhone);
+        }
+      } catch (error) {
+        console.error('Error loading phone number:', error);
+      }
+    };
+    fetchPhoneNumber();
+  }, []);
+
   const [formData, setFormData] = useState<FormData>({
     title: '',
     firstName: '',
@@ -22,8 +61,21 @@ export default function RegisterScreen() {
     referralCode: '',
   });
   const [showDropdown, setShowDropdown] = useState(false);
-
   const titles = ['Mr', 'Mrs', 'Ms', 'Dr', 'Prof'];
+
+  // Load saved form data if available
+  useEffect(() => {
+    const loadSavedData = async () => {
+      const saved = await getTempData('registerScreen');
+      if (saved) setFormData((prev) => ({ ...prev, ...saved }));
+    };
+    loadSavedData();
+  }, []);
+
+  // Save form data on every change
+  useEffect(() => {
+    saveTempData('registerScreen', formData);
+  }, [formData]);
 
   const handleTitleSelect = (title: string) => {
     setFormData({ ...formData, title });
@@ -31,15 +83,40 @@ export default function RegisterScreen() {
   };
 
   const handleRegister = async () => {
-    router.push('/confirm-registration?' + new URLSearchParams({
-      ...formData,
-      phoneNumber: params.phoneNumber as string
-    }).toString());
+    if (!phoneNumber) {
+      alert('Missing phone number. Please re-enter.');
+      return;
+    }
+
+    if (!formData.title || !formData.firstName || !formData.lastName) {
+      alert('Please complete all required fields.');
+      return;
+    }
+
+    await clearTempData('registerScreen');
+
+    router.push(
+      '/confirm-registration?' +
+        new URLSearchParams({
+          ...formData,
+          phoneNumber,
+        }).toString()
+    );
   };
 
   const handleBack = () => {
     router.back();
   };
+
+  if (phoneNumber === null) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text style={{ color: '#411D4B', fontSize: 16 }}>Loading phone number...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -96,7 +173,8 @@ export default function RegisterScreen() {
                 style={styles.input}
                 placeholder="Enter your first name"
                 value={formData.firstName}
-                onChangeText={(text) => setFormData({ ...formData, firstName: text })}
+                autoCapitalize="words"
+                onChangeText={(text) => setFormData({ ...formData, firstName: text.trim() })}
               />
             </View>
 
@@ -106,7 +184,8 @@ export default function RegisterScreen() {
                 style={styles.input}
                 placeholder="Enter your other name"
                 value={formData.otherName}
-                onChangeText={(text) => setFormData({ ...formData, otherName: text })}
+                autoCapitalize="words"
+                onChangeText={(text) => setFormData({ ...formData, otherName: text.trim() })}
               />
             </View>
 
@@ -116,7 +195,8 @@ export default function RegisterScreen() {
                 style={styles.input}
                 placeholder="Enter your last name"
                 value={formData.lastName}
-                onChangeText={(text) => setFormData({ ...formData, lastName: text })}
+                autoCapitalize="words"
+                onChangeText={(text) => setFormData({ ...formData, lastName: text.trim() })}
               />
             </View>
 
@@ -126,7 +206,7 @@ export default function RegisterScreen() {
                 style={styles.input}
                 placeholder="Enter referral code if any"
                 value={formData.referralCode}
-                onChangeText={(text) => setFormData({ ...formData, referralCode: text })}
+                onChangeText={(text) => setFormData({ ...formData, referralCode: text.trim() })}
               />
             </View>
           </View>
@@ -134,13 +214,13 @@ export default function RegisterScreen() {
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity
-            style={styles.registerButton}
+            style={[styles.registerButton, phoneNumber === null && { opacity: 0.5 }]}
             onPress={handleRegister}
+            disabled={phoneNumber === null}
           >
-            <Text style={styles.buttonText}>
-              Register
-            </Text>
+            <Text style={styles.buttonText}>Register</Text>
           </TouchableOpacity>
+
           <Text style={styles.termsText}>
             By tapping on "Register" you agree to our{' '}
             <Text
@@ -148,7 +228,7 @@ export default function RegisterScreen() {
               onPress={() => router.push('/legal-docs')}
             >
               Terms and Conditions
-            </Text> and{' '}
+            </Text>{' '}and{' '}
             <Text
               style={styles.termsLink}
               onPress={() => router.push('/legal-docs')}
@@ -296,4 +376,4 @@ const styles = StyleSheet.create({
     color: '#411D4B',
     textDecorationLine: 'underline',
   },
-}); 
+});

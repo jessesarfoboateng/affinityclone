@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, SafeAreaView, ScrollView, ActivityIndicator, Alert, Platform, Linking, ViewStyle, TextStyle, ImageStyle, StyleProp, Animated, TextInput } from 'react-native';
 import { Camera, CameraView } from 'expo-camera';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as FaceDetector from 'expo-face-detector';
-
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -10,13 +10,18 @@ import * as FileSystem from 'expo-file-system';
 import DocumentPreviewScreen from './document-preview';
 import { useApplication } from '../../context/ApplicationContext';
 import { ApplicationData } from '../../types/application';
+import { saveTempData, getTempData, clearTempData } from '@/utils/tempStorage';
+
 
 type DocumentType = 'ghanaCardFront' | 'ghanaCardBack' | 'selfie';
 
-interface DocumentCapture {
-  ghanaCardFront: string | null;
-  ghanaCardBack: string | null;
-  selfie: string | null;
+
+
+interface DocumentCaptureData {
+  ghanaCardNumber?: string;
+  ghanaCardFront?: string;
+  ghanaCardBack?: string;
+  selfie?: string;
 }
 
 type LoadingState = {
@@ -115,6 +120,28 @@ type DocumentCaptureStyles = {
 };
 
 export default function DocumentCaptureScreen() {
+
+  const { setLastAuthStep } = useApplication();
+
+  useEffect(() => {
+    setLastAuthStep('document-capture'); // this identifies the current step
+  }, []);
+
+  const [ghanaCardNumber, setGhanaCardNumber] = useState<string>('');
+  const [ghanaCardError, setGhanaCardError] = useState<string>('');
+
+  useEffect(() => {
+    const loadSavedCardNumber = async () => {
+      const saved = await getTempData('documentCapture') as { ghanaCardNumber?: string };
+      if (saved?.ghanaCardNumber) {
+        setGhanaCardNumber(saved.ghanaCardNumber);
+      }
+    };
+    loadSavedCardNumber();
+  }, []);
+  
+  
+
   const router = useRouter();
   const { setApplicationData, applicationData } = useApplication();
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -138,8 +165,13 @@ export default function DocumentCaptureScreen() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const [ghanaCardNumber, setGhanaCardNumber] = useState('');
-  const [ghanaCardError, setGhanaCardError] = useState('');
+ 
+
+    // ✅ Save card number anytime it updates
+    useEffect(() => {
+      const saveData: DocumentCaptureData = { ghanaCardNumber };
+      saveTempData('documentCapture', saveData);
+    }, [ghanaCardNumber]);
 
   useEffect(() => {
     (async () => {
@@ -281,25 +313,33 @@ export default function DocumentCaptureScreen() {
     }
   };
 
+
   const clearStoredImages = async () => {
     try {
       setLoadingState(prev => ({ ...prev, isUploading: true }));
-
+  
+      const documentDir = FileSystem.documentDirectory;
+      if (!documentDir) {
+        console.warn('Document directory is not available.');
+        Alert.alert('Error', 'Document storage directory not found.');
+        return;
+      }
+  
       // Clear all images from the document directory
-      const files = await FileSystem.readDirectoryAsync(FileSystem.documentDirectory);
+      const files = await FileSystem.readDirectoryAsync(documentDir);
       for (const file of files) {
         if (file.startsWith('image-')) {
-          await FileSystem.deleteAsync(`${FileSystem.documentDirectory}${file}`);
+          await FileSystem.deleteAsync(`${documentDir}${file}`);
         }
       }
-
+  
       // Reset the captured images state
       setCapturedImages({
-        ghanaCardFront: '',
-        ghanaCardBack: '',
-        selfie: ''
+        ghanaCardFront: null,
+        ghanaCardBack: null,
+        selfie: null
       });
-
+  
       // Reset application context
       if (applicationData) {
         setApplicationData({
@@ -315,7 +355,7 @@ export default function DocumentCaptureScreen() {
           }
         });
       }
-
+  
       Alert.alert('Success', 'All stored images have been cleared.');
     } catch (error) {
       console.error('Error clearing images:', error);
@@ -324,30 +364,45 @@ export default function DocumentCaptureScreen() {
       setLoadingState(prev => ({ ...prev, isUploading: false }));
     }
   };
-
+  
+  
   const saveImageToPermanentLocation = async (uri: string): Promise<string> => {
     try {
       // Check if the URI is already in the document directory
-      if (uri.startsWith(FileSystem.documentDirectory)) {
+      if (uri.startsWith(FileSystem.documentDirectory || '')) {
         return uri; // Already in permanent storage, no need to copy
       }
-
-      // Generate a unique filename
+  
+      // Compress the image first
+      const compressed = await ImageManipulator.manipulateAsync(
+        uri,
+        [],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+      );
+  
+      // Check if documentDirectory is available
+      if (!FileSystem.documentDirectory) {
+        throw new Error('Document directory is not available');
+      }
+  
+      // Generate a unique filename and target URI
       const timestamp = Date.now();
-      const filename = `image-${timestamp}.jpg`;
-      const newUri = `${FileSystem.documentDirectory}${filename}`;
-
+      const newUri = `${FileSystem.documentDirectory}image-${timestamp}.jpg`;
+  
+      // Copy image to permanent storage
       await FileSystem.copyAsync({
-        from: uri,
-        to: newUri
+        from: compressed.uri,
+        to: newUri,
       });
-
+  
       return newUri;
     } catch (error) {
       console.error('Error saving image:', error);
       throw error;
     }
   };
+  
+  
 
   const pickImage = async () => {
     try {
@@ -589,17 +644,29 @@ export default function DocumentCaptureScreen() {
 
   const handleSubmit = async () => {
     try {
+
+      await clearTempData('documentCapture');
+
       setLoadingState(prev => ({ ...prev, isSubmitting: true }));
 
       // Validate Ghana card number
       if (!ghanaCardNumber) {
         setGhanaCardError('Please enter your Ghana Card number');
+        setLoadingState(prev => ({ ...prev, isSubmitting: false }));
         return;
       }
+
+        // Validate Ghana card number format
+    if (!validateGhanaCardNumber(ghanaCardNumber)) {
+      setGhanaCardError('Invalid Ghana Card number format. Use GHA-XXXXXXXXX-X');
+      setLoadingState(prev => ({ ...prev, isSubmitting: false }));
+      return;
+    }
 
       // Validate that all required images are captured
       if (!capturedImages.ghanaCardFront || !capturedImages.ghanaCardBack || !capturedImages.selfie) {
         Alert.alert('Error', 'Please capture all required images');
+        setLoadingState(prev => ({ ...prev, isSubmitting: false }));
         return;
       }
 
@@ -609,16 +676,25 @@ export default function DocumentCaptureScreen() {
       const selfie = capturedImages.selfie as string;
 
       // Save all captured images and Ghana card number to application context
-      setApplicationData({
-        identityInfo: {
-          ghanaCardNumber: ghanaCardNumber,
-          ghanaCardFront,
-          ghanaCardBack
-        },
-        selfieInfo: {
-          selfie
-        }
-      });
+     // Example: Update application context and go to next screen
+     setApplicationData((prev: ApplicationData) => ({
+      ...prev,
+      identityInfo: {
+        ...prev.identityInfo,
+        ghanaCardFront: '',
+        ghanaCardBack: '',
+      },
+      selfieInfo: {
+        ...prev.selfieInfo,
+        selfie: '',
+      },
+    }));
+    
+// Navigate or show success
+Alert.alert('Success', 'Identity information submitted successfully!');
+
+
+      //TODO: Upload or next navigation step
 
       // Show preview
       setShowPreview(true);

@@ -1,9 +1,15 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
+import { useApplication } from '@/context/ApplicationContext';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { saveTempData, getTempData, clearTempData } from '@/utils/tempStorage';
+
 
 export default function SetupPinScreen() {
+
+  const { setLastAuthStep } = useApplication();
+
   const router = useRouter();
   const params = useLocalSearchParams();
   const [pin, setPin] = useState('');
@@ -16,6 +22,26 @@ export default function SetupPinScreen() {
     pattern: true,
     match: false
   });
+
+  useEffect(() => {
+    setLastAuthStep('setup-pin'); // this identifies the current step
+  }, []);
+
+  useEffect(() => {
+    const loadSavedPin = async () => {
+      const saved = await getTempData('setupPin') as { pin?: string; confirmPin?: string };
+      if (saved?.pin) setPin(saved.pin);
+      if (saved?.confirmPin) setConfirmPin(saved.confirmPin);
+    };
+    loadSavedPin();
+  }, []);
+  
+
+  // 🔽 Save pin and confirmPin as user types
+useEffect(() => {
+  saveTempData('setupPin', { pin, confirmPin });
+}, [pin, confirmPin]);
+
 
   const checkCommonPatterns = (pin: string) => {
     // Check for repeating digits (e.g., 111111)
@@ -67,18 +93,24 @@ export default function SetupPinScreen() {
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (pin !== confirmPin) {
       setError('PINs do not match. Please try again.');
       return;
     }
     // TODO: Save PIN securely
-    router.push('/open-account?' + new URLSearchParams({
-      firstName: params.firstName as string,
-      lastName: params.lastName as string,
-      phoneNumber: params.phoneNumber as string
-    }).toString());
+    try {
+      await clearTempData('setupPin'); // ✅ Clear once done
+      router.push('/open-account?' + new URLSearchParams({
+        firstName: params.firstName as string,
+        lastName: params.lastName as string,
+        phoneNumber: params.phoneNumber as string
+      }).toString());
+    } catch (err) {
+      console.error('Failed to clear setupPin temp data:', err);
+    }
   };
+  
 
   return (
     <SafeAreaView style={styles.safeArea}>
