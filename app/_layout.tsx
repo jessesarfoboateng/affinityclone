@@ -1,55 +1,30 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Slot, Stack, useRouter, useSegments } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import 'react-native-reanimated';
+import { ApplicationProvider, useApplication } from '../context/ApplicationContext';
+import { ThemeProvider } from '../context/ThemeContext'; 
+import RootLayoutContent from './RootLayoutContent';
+import { View, ActivityIndicator } from 'react-native';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
+// This will wrap your app in the context provider
 export default function RootLayout() {
-  const [isReady, setIsReady] = useState(false);
-  const segments = useSegments();
-  const router = useRouter();
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
-
-  useEffect(() => {
-    checkOnboarding();
-  }, []);
-
-  async function checkOnboarding() {
-    try {
-      const hasSeenOnboarding = await AsyncStorage.getItem('hasSeenOnboarding');
-
-      if (!hasSeenOnboarding) {
-        router.replace('/(onboarding)');
-      } else {
-        router.replace('/(tabs)');
-      }
-    } catch (error) {
-      console.error('Error checking onboarding status:', error);
-    } finally {
-      setIsReady(true);
-    }
-  }
-
-  if (!isReady || !loaded) {
-    // Show a loading screen or splash screen here
-    return <Slot />;
-  }
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <ApplicationProvider>
+      <ThemeProvider>
+      <InnerLayout />
+      </ThemeProvider>
+    </ApplicationProvider>
   );
+}
+
+// Wait for the app state to be loaded before rendering the content
+function InnerLayout() {
+  const { loaded } = useApplication();
+
+  if (!loaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return <RootLayoutContent />;
 }
