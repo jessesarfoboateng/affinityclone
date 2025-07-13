@@ -107,11 +107,28 @@ export default function TransactScreen() {
   };
 
   const handleTransactionTypePress = (typeId: string) => {
-    Alert.alert('Coming Soon', 'This feature will be available soon');
+    // TODO: Add your specific paths here
+    switch (typeId) {
+      case '1':
+        router.push("../../(screens)/SendMoney");
+        break;
+      case '2':
+        router.push("../../(screens)/Deposit");
+        break;
+      case '3':
+        router.push("../../(screens)/Payment");
+        break;
+      case '4':
+        router.push("../../(screens)/AddAccount");
+        break;
+      default:
+        router.push('YOUR_DEFAULT_PATH_HERE');
+    }
   };
 
   const handleRecipientPress = (recipientId: string) => {
-    Alert.alert('Coming Soon', 'Recipient selection will be available soon');
+    // TODO: Add your recipient selection path here
+    router.push(`YOUR_RECIPIENT_PATH_HERE/${recipientId}`);
   };
 
   const renderTransactionType = (type: typeof transactionTypes[0]) => (
@@ -188,35 +205,7 @@ export default function TransactScreen() {
           {transactionTypes.map(renderTransactionType)}
         </View>
 
-        {/* <View style={styles.recentRecipientsContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#411D4B' }]}>
-              Recent Recipients
-            </Text>
-            <TouchableOpacity>
-              <Text style={[styles.viewAllText, { color: isDarkMode ? '#ccc' : '#411D4B' }]}>
-                View All
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {recentRecipients.length > 0 ? (
-            recentRecipients.map(renderRecentRecipient)
-          ) : (
-            <View style={styles.emptyRecipients}>
-              <Ionicons name="people-outline" size={40} color="#ccc" />
-              <Text style={[styles.emptyRecipientsText, { color: isDarkMode ? '#aaa' : '#666' }]}>
-                No recent recipients
-              </Text>
-            </View>
-          )}
-        </View> */}
-
-        {/* <View style={[styles.infoCard, { backgroundColor: isDarkMode ? '#1a1a1a' : '#fff' }]}>
-          <Ionicons name="information-circle-outline" size={24} color="#411D4B" />
-          <Text style={[styles.infoText, { color: isDarkMode ? '#aaa' : '#666' }]}>
-            Need help with a transaction? Contact our support team for assistance.
-          </Text>
-        </View> */}
+    
       </ScrollView>
     </SafeAreaView>
   );
