@@ -35,26 +35,22 @@ export default function DestinationAccount() {
     console.log('Add new recipient pressed');
   };
 
-  // Configure the default header with cancel functionality
-  const CancelButton = () => (
-    <TouchableOpacity onPress={handleCancel}>
-      <Text style={styles.cancelText}>Cancel</Text>
-    </TouchableOpacity>
-  );
-
-  const BackButton = () => (
-    <TouchableOpacity onPress={() => router.back()}>
-      <FontAwesome name="chevron-left" size={18} color="#3D1A4D" />
-    </TouchableOpacity>
-  );
-
   return (
     <>
       <Stack.Screen
         options={{
           title: 'Send money',
-          headerLeft: () => <BackButton />,
-          headerRight: () => <CancelButton />,
+          headerShown: true,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+              <FontAwesome name="chevron-left" size={18} color="#3D1A4D" />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          ),
           headerTitleStyle: {
             fontSize: 18,
             fontWeight: '600',
@@ -63,8 +59,10 @@ export default function DestinationAccount() {
           headerStyle: {
             backgroundColor: '#fff',
           },
+          headerTintColor: '#3D1A4D',
         }}
       />
+      
       <SafeAreaView style={styles.container}>
         {/* Header Section */}
         <View style={styles.headerSection}>
@@ -174,6 +172,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  headerButton: {
+    padding: 4,
   },
   cancelText: {
     color: '#FF6B6B',
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     maxWidth: 250,
   },
-  // Modal Styles (same as original)
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
