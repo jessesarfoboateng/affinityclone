@@ -1,9 +1,10 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const Card = ({ label, backgroundColor, icon, iconType = 'image' }) => (
-  <TouchableOpacity style={[styles.card, { backgroundColor }]}>
+const Card = ({ label, backgroundColor, icon, iconType = 'image', onPress }) => (
+  <TouchableOpacity style={[styles.card, { backgroundColor }]} onPress={onPress}>
     <View style={styles.iconWrapper}>
       {iconType === 'image' ? (
         <Image source={icon} style={styles.icon} />
@@ -16,6 +17,16 @@ const Card = ({ label, backgroundColor, icon, iconType = 'image' }) => (
 );
 
 export default function DestAccount() {
+  const router = useRouter();
+
+  const handleMobileWalletPress = () => {
+    router.push('(screens)/depositIntoAccount');
+  };
+
+  const handleBankTransferPress = () => {
+    router.push('/bank-transfer-deposit');
+  };
+
   return (
     <SafeAreaView style={{backgroundColor:"white",flex:1}}>
       <View style={{marginTop:20,marginLeft:20}}>
@@ -30,12 +41,14 @@ export default function DestAccount() {
             backgroundColor="#E6FBF7"
             icon={require('@/assets/images/Wallet-pana.png')}
             iconType="image"
+            onPress={handleMobileWalletPress}
           />
           <Card
             label="From other bank"
             backgroundColor="#FEF3E6"
             icon={<FontAwesome name="bank" size={24} color="#3D1A4D" />}
             iconType="component"
+            onPress={handleBankTransferPress}
           />
         </View>
         
