@@ -1,6 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
-import React from 'react';
 import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const Card = ({ label, backgroundColor, icon, iconType = 'image', onPress }) => (
@@ -21,8 +20,8 @@ export default function DestAccount() {
   return (
     <SafeAreaView style={{backgroundColor:"white",flex:1}}>
       <View style={{marginTop:20,marginLeft:20}}>
-        <Text style={{fontSize:22,fontWeight:"700",fontFamily:"SpaceMono"}}>Destination Account</Text>
-        <Text style={{marginTop:15,fontSize:12,color:"gray"}}>Select an account to send money from</Text>
+        <Text style={{fontSize:25,fontWeight:"600",fontFamily:"SpaceMono"}}>Destination Account</Text>
+        <Text style={{marginTop:15,fontSize:15,color:"gray"}}>Select the type of account</Text>
       </View>
 
       <View style={styles.container}>
@@ -42,11 +41,11 @@ export default function DestAccount() {
             onPress={()=>router.push("")}
           />
         </View>
-        <View style={styles.row}>
+        <View style={styles.otherBank}>
           <Card
             label="Other bank"
             backgroundColor="#FEF3E6"
-            icon={<FontAwesome name="bank" size={24} color="#3D1A4D" />}
+            icon={<FontAwesome name="bank" size={24} color="#FF9800"/>}
             iconType="component"
             onPress={()=>router.push("")}
           />
@@ -65,6 +64,11 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     marginBottom: 16,
+  },
+  otherBank: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    width: 190
   },
   card: {
     flex: 1,

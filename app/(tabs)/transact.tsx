@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   transactionTypeInfo: { flex: 1 },
-  transactionTypeTitle: { fontSize: 19, fontWeight: '500' },
+  transactionTypeTitle: { fontSize: 19, fontWeight: '600' },
   transactionTypeDescription: { fontSize: 14, marginTop: 7 },
   recentRecipientsContainer: { padding: 20 },
   sectionHeader: {
