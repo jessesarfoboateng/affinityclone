@@ -4,8 +4,7 @@ import React from 'react';
 import {
   SafeAreaView,
   ScrollView,
-  StyleSheet,
-  Text,
+  StyleSheet, Switch, Text,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -47,13 +46,13 @@ const menuItems = [
     icon: 'notifications-outline',
     type: 'link',
   },
-  // {
-  //   id: '6',
-  //   title: 'Dark Mode',
-  //   subtitle: 'Toggle dark mode on/off',
-  //   icon: 'moon-outline',
-  //   type: 'toggle',
-  // },
+  {
+    id: '6',
+    title: 'Dark Mode',
+    subtitle: 'Toggle dark mode on/off',
+    icon: 'moon-outline',
+    type: 'toggle',
+  },
   // {
   //   id: '7',
   //   title: 'Help & Support',
@@ -141,7 +140,7 @@ export default function MoreScreen() {
                 </View>
               </View>
 
-              {/* {item.type === 'toggle' ? (
+              {item.type === 'toggle' ? (
                 <Switch
                   value={isDarkMode}
                   onValueChange={() => handleToggle(item.id)}
@@ -155,7 +154,7 @@ export default function MoreScreen() {
                   size={20}
                   color={isDarkMode ? '#888' : '#C0C0C0'}
                 />
-              )} */}
+              )}
             </TouchableOpacity>
           ))}
         </View>
