@@ -16,9 +16,19 @@ const Card = ({ label, backgroundColor, icon, iconType = 'image', onPress }) => 
   </TouchableOpacity>
 );
 
+const RecipientOption = ({ icon, label, onPress }) => (
+  <TouchableOpacity style={styles.recipientOption} onPress={onPress}>
+    <View style={styles.recipientIcon}>
+      {icon}
+    </View>
+    <Text style={styles.recipientLabel}>{label}</Text>
+  </TouchableOpacity>
+);
+
 export default function DestAccount() {
   const router = useRouter();
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showRecipientModal, setShowRecipientModal] = useState(false);
 
   const handleCancel = () => {
     setShowCancelModal(true);
@@ -31,6 +41,23 @@ export default function DestAccount() {
 
   const dismissCancel = () => {
     setShowCancelModal(false);
+  };
+
+  const handleMobileWalletPress = () => {
+    setShowRecipientModal(true);
+    
+  };
+
+  const dismissRecipientModal = () => {
+    setShowRecipientModal(false);
+  };
+
+  const handleRecipientSelect = (recipientType) => {
+    setShowRecipientModal(false);
+    router.push("../../(screens)/recipient");
+    // Handle the selected recipient type
+    console.log('Selected recipient:', recipientType);
+    // Navigate to appropriate screen based on selection
   };
 
   // Configure the default header with cancel functionality
@@ -68,7 +95,7 @@ export default function DestAccount() {
             backgroundColor="#E6FBF7"
             icon={require('@/assets/images/Wallet-pana.png')}
             iconType="image"
-            onPress={()=>router.push("")}
+            onPress={handleMobileWalletPress}
           />
         </View>
         <View style={styles.otherBank}>
@@ -107,6 +134,39 @@ export default function DestAccount() {
             <TouchableOpacity style={styles.dismissButton} onPress={dismissCancel}>
               <Text style={styles.dismissButtonText}>No, don't cancel</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Recipient Selection Modal */}
+      <Modal
+        visible={showRecipientModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={dismissRecipientModal}
+      >
+        <View style={styles.recipientModalOverlay}>
+          <View style={styles.recipientModalContainer}>
+            <View style={styles.recipientModalHeader}>
+              <Text style={styles.recipientModalTitle}>Select a recipient</Text>
+              <TouchableOpacity onPress={dismissRecipientModal}>
+                <FontAwesome name="times" size={20} color="#666" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.recipientOptions}>
+              <RecipientOption
+                icon={<FontAwesome name="user" size={24} color="#4A90E2" />}
+                label="Other mobile wallet"
+                onPress={() => handleRecipientSelect('other')}
+              />
+              
+              <RecipientOption
+                icon={<View style={styles.myWalletIcon}><Text style={styles.myWalletText}>SK</Text></View>}
+                label="My mobile wallet"
+                onPress={() => handleRecipientSelect('my')}
+              />
+            </View>
           </View>
         </View>
       </Modal>
@@ -235,5 +295,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  // Recipient Modal Styles
+  recipientModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  recipientModalContainer: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    minHeight: 200,
+  },
+  recipientModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  recipientModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#3D1A4D',
+  },
+  recipientOptions: {
+    gap: 20,
+  },
+  recipientOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+  },
+  recipientIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E6F7FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  recipientLabel: {
+    fontSize: 16,
+    color: '#3D1A4D',
+    fontWeight: '500',
+  },
+  myWalletIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E5E5E5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  myWalletText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
   },
 });
