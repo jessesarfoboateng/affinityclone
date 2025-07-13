@@ -1,9 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   FlatList,
   Image,
   Modal,
+  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,11 +14,11 @@ import {
 export default function NotificationsScreen() {
   const { showMenu } = useLocalSearchParams();
   const router = useRouter();
-
+  
   const [menuVisible, setMenuVisible] = useState(false);
   const [notifications, setNotifications] = useState([
-    { id: '1', text: 'Transaction completed', read: false },
-    { id: '2', text: 'Your account statement is ready', read: false },
+    // { id: '1', text: 'Transaction completed', read: false },
+    // { id: '2', text: 'Your account statement is ready', read: false },
   ]);
 
   useEffect(() => {
@@ -42,11 +43,13 @@ export default function NotificationsScreen() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+    <SafeAreaView style={styles.container}>
+
+      {/* Content */}
       {notifications.length === 0 || notifications.every((n) => n.read) ? (
         <View style={styles.content}>
           <Image
-         source={require("@/assets/images/bell-icon.png")}
+            source={require("@/assets/images/bell-icon.png")}
             style={styles.image}
           />
           <Text style={styles.message}>
@@ -82,57 +85,62 @@ export default function NotificationsScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F8F9FA',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    padding: 8,
+  },
+  backArrow: {
+    fontSize: 24,
+    color: '#6B7280',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  menuButton: {
+    padding: 8,
+  },
+  menuDots: {
+    fontSize: 20,
+    color: '#6B7280',
+    fontWeight: 'bold',
+  },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 40,
   },
   image: {
-    width: 130,
-    height: 130,
-    marginBottom: 20,
+    width: 160,
+    height: 160,
+    marginBottom: 32,
     tintColor: '#4B2354',
   },
   message: {
     textAlign: 'center',
-    fontSize: 15,
-    color: '#555',
-    lineHeight: 22,
+    fontSize: 16,
+    color: '#9CA3AF',
+    lineHeight: 24,
+    fontWeight: '400',
   },
-  modalOverlay: {
-    flex: 1,
-  },
-  menu: {
-    position: 'absolute',
-    top: 55,
-    right: 16,
-    backgroundColor: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  menuText: {
-    fontSize: 15,
-    color: '#333',
-  },
-  notificationItem: {
-    padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 10,
-    elevation: 1,
-  },
-  notificationText: {
-    fontSize: 15,
-    color: '#333',
-  },
-});
+})
