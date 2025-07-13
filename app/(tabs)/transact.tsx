@@ -119,7 +119,7 @@ export default function TransactScreen() {
         router.push("../../(screens)/Payment");
         break;
       case '4':
-        router.push("../../(screens)/AddAccount");
+        router.push("../../(screens)/scheduledTransactions");
         break;
       default:
         router.push('YOUR_DEFAULT_PATH_HERE');
