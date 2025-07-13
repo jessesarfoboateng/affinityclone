@@ -68,10 +68,10 @@ interface UserData {
 }
 
 const quickActions = [
-  { id: '1', title: 'Send Money', icon: 'paper-plane', color: '#411D4B' },
-  { id: '2', title: 'Deposit into account', icon: 'receipt', color: '#4CAF50' },
-  { id: '3', title: 'Make Payment', icon: 'phone-portrait', color: '#2196F3' },
-  { id: '4', title: 'Add account', icon: 'apps', color: '#FF9800' },
+  { id: '1', title: 'Send money', icon: 'paper-plane-outline', color: '#E3F2FD', iconColor: '#2196F3' },
+  { id: '2', title: 'Deposit money', icon: 'wallet-outline', color: '#FFF3E0', iconColor: '#FF9800' },
+  { id: '3', title: 'Make payment', icon: 'card-outline', color: '#E8F5E8', iconColor: '#4CAF50' },
+  { id: '4', title: 'Add account', icon: 'add-circle-outline', color: '#F3E5F5', iconColor: '#9C27B0' },
 ];
 
 export default function HomeScreen() {
@@ -222,22 +222,30 @@ export default function HomeScreen() {
 
 
 
-  const renderQuickActions = () => (
-    <View style={styles.quickActionsContainer}>
+ const renderQuickActions = () => (
+  <View style={styles.quickActionsContainer}>
+    <Text style={styles.quickActionsTitle}>Quick actions</Text>
+    <View style={styles.quickActionsGrid}>
       {quickActions.map((action) => (
         <TouchableOpacity
           key={action.id}
-          style={styles.quickActionButton}
+          style={[styles.quickActionCard, { backgroundColor: action.color }]}
           onPress={() => handleQuickAction(action.id)}
         >
-          <View style={[styles.quickActionIcon, { backgroundColor: action.color }]}>
-            <Ionicons name={action.icon as any} size={24} color="white" />
+          <View style={styles.quickActionContent}>
+            <Ionicons 
+              name={action.icon as any} 
+              size={24} 
+              color={action.iconColor} 
+              style={styles.quickActionIcon}
+            />
+            <Text style={styles.quickActionTitle}>{action.title}</Text>
           </View>
-          <Text style={styles.quickActionText}>{action.title}</Text>
         </TouchableOpacity>
       ))}
     </View>
-  );
+  </View>
+);
 
   const renderTransaction = (transaction: Transaction) => (
     <TouchableOpacity key={transaction.id} style={styles.transactionItem}>
@@ -430,7 +438,7 @@ export default function HomeScreen() {
         {/* Application Status */}
         {renderApplicationStatus()}
 
-        <View style={styles.quickActionContainer}>
+        <View>
           {/* Quick Actions */}
           {renderQuickActions()}
         </View>
@@ -595,31 +603,40 @@ const getStyles = (isDarkMode: boolean) =>
       fontSize: 13,
       color: isDarkMode ? '#aaa' : '#666',
     },
-    quickActionContainer: {
-      padding: 16,
-    },
     quickActionsContainer: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      gap:10,
-      marginBottom: 10,
+     padding: 16,
     },
-    quickActionButton: {
-      alignItems: 'center',
+    quickActionsTitle: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: isDarkMode ? '#fff' : '#666',
+      marginBottom: 16,
+    },
+    quickActionsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    quickActionCard: {
+      width: (width - 44) / 2, // Calculate width for 2 columns with gaps
+      height: 65,
+      borderRadius: 12,
+      padding: 12,
       justifyContent: 'center',
+    },
+    quickActionContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
     },
     quickActionIcon: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      justifyContent: 'center',
-      alignItems: 'center',
+      marginRight: 12,
     },
-    quickActionText: {
-      marginTop: 4,
-      fontSize: 11,
-      fontWeight:"500",
-      color: isDarkMode ? '#ccc' : '#333',
+    quickActionTitle: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: isDarkMode ? '#fff' : '#333',
+      flex: 1,
     },
     transactionsContainer: {
       padding: 16,
@@ -755,5 +772,5 @@ const getStyles = (isDarkMode: boolean) =>
     },
     contain: {
       paddingBottom: 10,
-    },
+    }
   });
