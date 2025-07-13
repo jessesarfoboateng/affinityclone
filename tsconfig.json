@@ -15,5 +15,5 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
-, "app/(screens)/notifications.jsx"  ]
+, "app/(screens)/notifications.jsx", "app/(tabs)/transact.jsx"  ]
 }

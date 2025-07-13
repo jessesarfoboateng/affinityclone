@@ -1,48 +1,52 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
+  Alert,
+  RefreshControl,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  SafeAreaView,
-  Alert,
-  RefreshControl,
+  View,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchMockRecentRecipients, RecentRecipient } from '../../services/mockApi';
 import { useTheme } from '../../context/ThemeContext';
+import { fetchMockRecentRecipients, RecentRecipient } from '../../services/mockApi';
 
 const transactionTypes = [
   {
     id: '1',
     title: 'Send Money',
     icon: 'paper-plane',
-    color: '#411D4B',
+    color: '#2196F3',
+    bgColor: '#eff8ffff',
     description: 'Transfer money to other Relafin users',
   },
   {
     id: '2',
-    title: 'Pay Bills',
+    title: 'Deposit into account',
     icon: 'receipt',
-    color: '#4CAF50',
-    description: 'Pay for utilities and services',
+    color: '#FF9800',
+    bgColor: '#f7ecdcff',
+    description: 'Receive from your mobile wallet',
   },
   {
     id: '3',
-    title: 'Top Up',
+    title: 'Make payment',
     icon: 'phone-portrait',
-    color: '#2196F3',
-    description: 'Recharge your mobile phone',
+    color: '#4CAF50',
+    bgColor: '#e2f7e2ff',
+    description: 'Pay for airtime, bills and data',
   },
   {
     id: '4',
-    title: 'Withdraw',
+    title: 'Scheduled transactions',
     icon: 'cash',
-    color: '#FF9800',
-    description: 'Withdraw money from your account',
+    color: '#746d6dff',
+    bgColor: '#e0d2d227',
+    description: 'View recurring transactions',
   },
 ];
 
@@ -115,7 +119,7 @@ export default function TransactScreen() {
       key={type.id}
       style={[
         styles.transactionTypeCard,
-        { backgroundColor: isDarkMode ? '#1a1a1a' : '#fff' },
+        { backgroundColor: type.bgColor },
       ]}
       onPress={() => handleTransactionTypePress(type.id)}
     >
@@ -130,7 +134,6 @@ export default function TransactScreen() {
           {type.description}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={24} color={isDarkMode ? '#aaa' : '#666'} />
     </TouchableOpacity>
   );
 
@@ -178,13 +181,14 @@ export default function TransactScreen() {
       >
         <View style={styles.header}>
           <Text style={[styles.title, { color: isDarkMode ? '#fff' : '#411D4B' }]}>Transact</Text>
+          <Text style={{marginTop: 10}}>Select a transaction option</Text>
         </View>
 
         <View style={styles.transactionTypesContainer}>
           {transactionTypes.map(renderTransactionType)}
         </View>
 
-        <View style={styles.recentRecipientsContainer}>
+        {/* <View style={styles.recentRecipientsContainer}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: isDarkMode ? '#fff' : '#411D4B' }]}>
               Recent Recipients
@@ -205,14 +209,14 @@ export default function TransactScreen() {
               </Text>
             </View>
           )}
-        </View>
+        </View> */}
 
-        <View style={[styles.infoCard, { backgroundColor: isDarkMode ? '#1a1a1a' : '#fff' }]}>
+        {/* <View style={[styles.infoCard, { backgroundColor: isDarkMode ? '#1a1a1a' : '#fff' }]}>
           <Ionicons name="information-circle-outline" size={24} color="#411D4B" />
           <Text style={[styles.infoText, { color: isDarkMode ? '#aaa' : '#666' }]}>
             Need help with a transaction? Contact our support team for assistance.
           </Text>
-        </View>
+        </View> */}
       </ScrollView>
     </SafeAreaView>
   );
@@ -222,18 +226,15 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollView: { flex: 1 },
   header: { padding: 20 },
-  title: { fontSize: 24, fontWeight: 'bold' },
+  title: { fontSize: 33, fontWeight: 'bold' },
   transactionTypesContainer: { padding: 20 },
   transactionTypeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
+    height: 95,
     borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginBottom: 15,
     elevation: 3,
   },
   iconContainer: {
@@ -245,8 +246,8 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   transactionTypeInfo: { flex: 1 },
-  transactionTypeTitle: { fontSize: 16, fontWeight: '600' },
-  transactionTypeDescription: { fontSize: 14 },
+  transactionTypeTitle: { fontSize: 19, fontWeight: '500' },
+  transactionTypeDescription: { fontSize: 14, marginTop: 7 },
   recentRecipientsContainer: { padding: 20 },
   sectionHeader: {
     flexDirection: 'row',
