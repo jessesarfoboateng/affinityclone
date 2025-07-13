@@ -1,314 +1,169 @@
-import React from 'react';
+import { AntDesign } from '@expo/vector-icons';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
+  Image, SafeAreaView, ScrollView,
   StyleSheet,
-  ScrollView,
-  SafeAreaView,
+  Text,
   TouchableOpacity,
-  Platform,
-  StatusBar,
-  Alert,
-  RefreshControl,
+  View
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchMockLoanProducts, LoanProduct } from '../../services/mockApi';
-import { useTheme } from '@/context/ThemeContext'; // 👈 make sure path is correct
 
-export default function LoansScreen() {
-  const router = useRouter();
-  const { colors, theme } = useTheme(); // 👈 get theme values
+const LoanScreen = () => {
+  const [expanded, setExpanded] = useState(null);
+  const [isEligible, setIsEligible] = useState(false); // simulate loan eligibility
 
-  const [userData, setUserData] = React.useState<any>(null);
-  const [loanProducts, setLoanProducts] = React.useState<LoanProduct[]>([]);
-  const [loading, setLoading] = React.useState(true);
-  const [refreshing, setRefreshing] = React.useState(false);
+  const faqs = [
+    {
+      question: 'What are Affinity Instant Loans?',
+      answer: 'Affinity Instant Loans offer quick approval and provide amounts ranging from GHS 100 to GHS 5,000, with flexible repayment terms of 1 to 3 months-helping you address your urgent financial needs with ease'
+    },
+    {
+      question: 'How can I qualify for a loan?',
+      answer: 'To qualify for an Affinity instant Loan, you must hold an active Affinity Daily or Growth account, maintain a good credit score, deposit frequently, and have a positive credit history. Timely repayment of exiting loans with Affinity and other financial institutions,, including mobile wallet services, is important in ascending our ability to repay.'
+    },
+    {
+      question: 'When will I qualify for a loan?',
+      answer: 'New customers can qualify for an affinity Instant Loan by saving and transacting on their Affinity account for three months after opening it. For existing customers, eligibility is accessed daily, and you’ll be notified as soon as you qualify. In the meantime, continue saving and transacting to improve your eligibility.'
+    },
+    {
+  question: 'Why is my credit score important?',
+  answer: `Your credit score helps lenders assess your reliability as a borrower and plays a role in determining your loan eligibility. However, it is not the sole factor considered for loan approval. Credit scores are categorized as follows:
 
-  React.useEffect(() => {
-    loadUserData();
-  }, []);
+• 0-250: Bad
+• 251-400: Low
+• 401-530: Average
+• 531-700: Good
+• 701-800: Best
 
-  const loadUserData = async () => {
-    try {
-      setLoading(true);
-      const data = await AsyncStorage.getItem('userData');
-      const phoneNumber = await AsyncStorage.getItem('phoneNumber');
-
-      if (data) setUserData(JSON.parse(data));
-      if (phoneNumber) await fetchLoanProducts(phoneNumber);
-    } catch (error) {
-      console.error('Error loading user data:', error);
-      Alert.alert('Error', 'Failed to load loan products');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchLoanProducts = async (phone: string) => {
-    try {
-      const productsData = await fetchMockLoanProducts(phone);
-      setLoanProducts(productsData);
-    } catch (error) {
-      console.error('Error fetching loan products:', error);
-      Alert.alert('Error', 'Failed to fetch loan products');
-    }
-  };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      const phoneNumber = await AsyncStorage.getItem('phoneNumber');
-      if (phoneNumber) await fetchLoanProducts(phoneNumber);
-    } catch (error) {
-      console.error('Error refreshing data:', error);
-      Alert.alert('Error', 'Failed to refresh data');
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  const handleLoanPress = (loan: LoanProduct) => {
-    if (!loan.isEligible) {
-      Alert.alert('Not Eligible', loan.eligibilityReason || 'You are not eligible for this loan product.');
-      return;
-    }
-
-    Alert.alert('Coming Soon', `Loan application for ${loan.title} will be available soon`);
-  };
-
-  const renderLoanProduct = (loan: LoanProduct) => (
-    <TouchableOpacity
-      key={loan.id}
-      style={[
-        styles.loanCard,
-        { backgroundColor: colors.card },
-        !loan.isEligible && styles.loanCardDisabled,
-      ]}
-      onPress={() => handleLoanPress(loan)}
-    >
-      <View style={[styles.loanIconContainer, { backgroundColor: theme === 'dark' ? '#222' : '#F5F5F5' }]}>
-        <Ionicons name={loan.icon as any} size={32} color={colors.icon} />
-      </View>
-      <View style={styles.loanInfo}>
-        <View style={styles.loanHeader}>
-          <Text style={[styles.loanTitle, { color: colors.text }]}>{loan.title}</Text>
-          {!loan.isEligible && (
-            <View style={styles.eligibilityBadge}>
-              <Text style={styles.eligibilityText}>Not Eligible</Text>
-            </View>
-          )}
-        </View>
-        <Text style={[styles.loanDescription, { color: colors.text }]}>{loan.description}</Text>
-        <View style={styles.loanDetails}>
-          <View style={styles.loanDetail}>
-            <Text style={styles.loanDetailLabel}>Interest Rate</Text>
-            <Text style={[styles.loanDetailValue, { color: colors.text }]}>{loan.interestRate}</Text>
-          </View>
-          <View style={styles.loanDetail}>
-            <Text style={styles.loanDetailLabel}>Term</Text>
-            <Text style={[styles.loanDetailValue, { color: colors.text }]}>{loan.term}</Text>
-          </View>
-          <View style={styles.loanDetail}>
-            <Text style={styles.loanDetailLabel}>Max Amount</Text>
-            <Text style={[styles.loanDetailValue, { color: colors.text }]}>{loan.maxAmount}</Text>
-          </View>
-        </View>
-        {!loan.isEligible && loan.eligibilityReason && (
-          <Text style={[styles.eligibilityReason, { color: colors.text }]}>{loan.eligibilityReason}</Text>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <Ionicons name="refresh" size={40} color={colors.icon} />
-          <Text style={[styles.loadingText, { color: colors.text }]}>Loading loan products...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={theme === 'dark' ? 'light-content' : 'dark-content'} />
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Loans</Text>
-          <Text style={[styles.subtitle, { color: colors.text }]}>
-            Choose from our range of loan products
-          </Text>
-        </View>
-
-        <View style={styles.loanProductsContainer}>
-          {loanProducts.length > 0 ? (
-            loanProducts.map(renderLoanProduct)
-          ) : (
-            <View style={styles.emptyLoans}>
-              <Ionicons name="cash-outline" size={40} color="#ccc" />
-              <Text style={[styles.emptyLoansText, { color: colors.text }]}>No loan products available</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={[styles.infoCard, { backgroundColor: theme === 'dark' ? '#222' : '#F5F5F5' }]}>
-          <Ionicons name="information-circle-outline" size={24} color={colors.icon} />
-          <Text style={[styles.infoText, { color: colors.text }]}>
-            Need help choosing a loan? Contact our support team for personalized assistance.
-          </Text>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+Maintaining a higher credit score increases your chances of loan approval.`
 }
 
+  ];
+
+  const toggleAccordion = (index) => {
+    setExpanded(prev => (prev === index ? null : index));
+  };
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+      <SafeAreaView>
+       {!isEligible && (
+        <Text style={styles.ineligibleText}>
+          You don’t qualify for an instant loan yet
+        </Text>
+      )}
+     <Image
+        source={require("@/assets/images/loan.jpg")}
+        style={styles.image}
+        resizeMode="contain"
+      />
+       <Text style={styles.infoText}>
+        To access loans, we encourage you to save and transact with us for a period of time.
+        Your access is checked regularly, and once you meet our requirements, we will notify you.
+      </Text>
+
+      <Text style={styles.faqTitle}>Your loan questions answered...</Text>
+
+      {faqs.map((item, index) => (
+        <View
+          key={index}
+          style={[
+            styles.accordion,
+            index === 1 ? styles.orange : index === 2 ? styles.green : index === 3 ? styles.blue : styles.default
+          ]}
+        >
+          <TouchableOpacity
+            onPress={() => toggleAccordion(index)}
+            style={styles.accordionHeader}
+          >
+            <Text style={styles.accordionText}>{item.question}</Text>
+            <AntDesign
+              name={expanded === index ? 'minuscircleo' : 'pluscircleo'}
+              size={20}
+              color="#7C7C7C"
+            />
+          </TouchableOpacity>
+          {expanded === index && (
+            <Text style={styles.accordionAnswer}>{item.answer}</Text>
+          )}
+        </View>
+      ))}
+      </SafeAreaView>
+    </ScrollView>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: '#fff',
+    paddingTop: 16,
+    paddingHorizontal: 16,
   },
-  scrollView: {
-    flex: 1,
-  },
-  header: {
-    padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 0 : 20,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#411D4B',
+  headerText: {
+    fontSize: 20,
+    fontWeight: '600',
+    alignSelf: 'center',
     marginBottom: 8,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  loanProductsContainer: {
-    padding: 20,
-  },
-  loanCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+  image: {
+    width: '100%',
+    height: 380,
     marginBottom: 16,
-    flexDirection: 'row',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  loanIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  loanInfo: {
-    flex: 1,
-  },
-  loanTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#411D4B',
-    marginBottom: 4,
-  },
-  loanDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 12,
-  },
-  loanDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  loanDetail: {
-    flex: 1,
-  },
-  loanDetailLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  loanDetailValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#411D4B',
-  },
-  infoCard: {
-    flexDirection: 'row',
-    backgroundColor: '#F5F5F5',
-    borderRadius: 12,
-    padding: 16,
-    margin: 20,
-    alignItems: 'center',
+  ineligibleText: {
+    color: 'black',
+    fontSize: 22,
+    fontWeight: '500',
+    marginBottom: 8,
+    marginTop:8,
   },
   infoText: {
-    flex: 1,
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 12,
-    lineHeight: 20,
+    textAlign: 'center',
+    color: '#606060',
+    fontSize: 17,
+    paddingHorizontal: 8,
+    marginBottom: 20,
   },
-  // New styles for enhanced loan functionality
-  loanCardDisabled: {
-    opacity: 0.6,
+  faqTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+    color: '#000',
   },
-  loanHeader: {
+  accordion: {
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+  },
+  accordionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
   },
-  eligibilityBadge: {
-    backgroundColor: '#FFEBEE',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  eligibilityText: {
-    fontSize: 10,
-    color: '#C62828',
-    fontWeight: '600',
-  },
-  eligibilityReason: {
-    fontSize: 12,
-    color: '#666',
-    fontStyle: 'italic',
-    marginTop: 8,
-  },
-  loadingContainer: {
+  accordionText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#3B3B3B',
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingRight: 10,
   },
-  loadingText: {
-    fontSize: 16,
-    color: '#411D4B',
-    marginTop: 16,
-  },
-  emptyLoans: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyLoansText: {
-    fontSize: 16,
-    color: '#ccc',
+  accordionAnswer: {
+    fontSize: 14,
+    color: '#444',
     marginTop: 8,
   },
-}); 
+  default: {
+    backgroundColor: '#EAF6FA',
+  },
+  orange: {
+    backgroundColor: '#FFF4E1',
+  },
+  green: {
+    backgroundColor: '#E7F4F0',
+  },
+  blue: {
+    backgroundColor: '#E8F2FA',
+  },
+});
+
+export default LoanScreen;

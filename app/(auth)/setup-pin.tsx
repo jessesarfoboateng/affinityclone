@@ -1,4 +1,5 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useApplication } from '@/context/ApplicationContext';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View, SafeAreaView, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
@@ -113,6 +114,7 @@ useEffect(() => {
   
 
   return (
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -224,6 +226,7 @@ useEffect(() => {
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 }
 

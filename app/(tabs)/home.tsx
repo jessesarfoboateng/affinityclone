@@ -1,27 +1,29 @@
+import { useTheme } from '@/context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { useTheme } from '@/context/ThemeContext';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  Alert,
+  Dimensions,
+  FlatList,
+  Image,
+  ImageBackground,
+  RefreshControl,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  FlatList,
-  Image,
-  SafeAreaView,
-  Dimensions,
-  RefreshControl,
-  Alert,
-  ImageBackground
+  View
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 //import { apiService } from '../../services/api';
 import { fetchMockAccountData } from '../../services/mockApi';
 
 import { useApplication } from '../../context/ApplicationContext';
+
+
 
 const { width } = Dimensions.get('window');
 
@@ -67,9 +69,9 @@ interface UserData {
 
 const quickActions = [
   { id: '1', title: 'Send Money', icon: 'paper-plane', color: '#411D4B' },
-  { id: '2', title: 'Pay Bills', icon: 'receipt', color: '#4CAF50' },
-  { id: '3', title: 'Top Up', icon: 'phone-portrait', color: '#2196F3' },
-  { id: '4', title: 'More', icon: 'apps', color: '#FF9800' },
+  { id: '2', title: 'Deposit into account', icon: 'receipt', color: '#4CAF50' },
+  { id: '3', title: 'Make Payment', icon: 'phone-portrait', color: '#2196F3' },
+  { id: '4', title: 'Add account', icon: 'apps', color: '#FF9800' },
 ];
 
 export default function HomeScreen() {
@@ -190,16 +192,16 @@ export default function HomeScreen() {
 
     switch (actionId) {
       case '1': // Send Money
-        Alert.alert('Coming Soon', 'Send Money feature will be available soon');
+       router.push("../../(screens)/SendMoney");
         break;
-      case '2': // Pay Bills
-        Alert.alert('Coming Soon', 'Pay Bills feature will be available soon');
+      case '2': // Deposit into account
+         router.push("../../(screens)/Deposit");
         break;
-      case '3': // Top Up
-        Alert.alert('Coming Soon', 'Top Up feature will be available soon');
+      case '3': // Make Payment
+         router.push("../../(screens)/Payment");
         break;
-      case '4': // More
-        Alert.alert('Coming Soon', 'More features will be available soon');
+      case '4': // Add account
+         router.push("../../(screens)/AddAccount");
         break;
     }
   };
@@ -217,6 +219,8 @@ export default function HomeScreen() {
       return 'GH₵ ****';
     }
   };
+
+
 
   const renderQuickActions = () => (
     <View style={styles.quickActionsContainer}>
@@ -380,8 +384,14 @@ export default function HomeScreen() {
                 <Text style={styles.greeting}>{getGreeting()}</Text>
                 <Text style={styles.name}>{getUserDisplayName()}</Text>
               </View>
-              <TouchableOpacity style={styles.notificationButton}>
+              <TouchableOpacity style={styles.notificationButton} onPress={() =>router.push("../../(screens)/notifications")}>
                 <Ionicons name="notifications-outline" size={24} color="#411D4B" />
+                
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}></Text>
+                </View>
+              
+
               </TouchableOpacity>
             </View>
 
@@ -496,7 +506,25 @@ const getStyles = (isDarkMode: boolean) =>
       backgroundColor: isDarkMode ? '#222' : '#f0f0f0',
       padding: 8,
       borderRadius: 20,
+      position: 'relative', 
     },
+    
+  badge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
     balanceCard: {
       backgroundColor: isDarkMode ? '#1a1a1a' : '#411D4B',
       margin: 20,
@@ -573,6 +601,7 @@ const getStyles = (isDarkMode: boolean) =>
     quickActionsContainer: {
       flexDirection: 'row',
       justifyContent: 'space-around',
+      gap:10,
       marginBottom: 10,
     },
     quickActionButton: {
@@ -588,7 +617,8 @@ const getStyles = (isDarkMode: boolean) =>
     },
     quickActionText: {
       marginTop: 4,
-      fontSize: 12,
+      fontSize: 11,
+      fontWeight:"500",
       color: isDarkMode ? '#ccc' : '#333',
     },
     transactionsContainer: {
