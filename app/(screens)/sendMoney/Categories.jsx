@@ -1,4 +1,5 @@
 import { Entypo, FontAwesome5, Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   SafeAreaView,
@@ -13,6 +14,7 @@ import {
 const TransactionCategoriesPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('Transport');
   const [narration, setNarration] = useState('');
+  const router = useRouter();
 
   const categories = [
     { id: 'general', name: 'General', icon: 'apps', iconFamily: 'Ionicons', color: '#F3F4F6' },
@@ -111,7 +113,7 @@ const TransactionCategoriesPage = () => {
       </ScrollView>
 
       {/* Continue Button */}
-      <TouchableOpacity style={styles.continueButton}>
+      <TouchableOpacity style={styles.continueButton} onPress={() => router.push("../../(screens)/sendMoney/TransactionAmount")}>
         <Text style={styles.continueButtonText}>Continue</Text>
       </TouchableOpacity>
     </SafeAreaView>
