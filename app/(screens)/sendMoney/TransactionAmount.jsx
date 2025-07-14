@@ -1,19 +1,23 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
+  Keyboard,
   SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 
 const TransactionAmountPage = () => {
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleAmountChange = (text) => {
     // Remove any non-numeric characters except decimal point
@@ -34,10 +38,12 @@ const TransactionAmountPage = () => {
   };
 
   const handleContinue = async () => {
-    if (!amount || parseFloat(amount) <= 0) {
+    if (!amount || parseFloat(amount) <= 0 || isNaN(parseFloat(amount))) {
       Alert.alert('Invalid Amount', 'Please enter a valid amount');
       return;
-    }
+    } 
+    router.push("../../(screens)/sendMoney/addNewRecipient")
+    
 
     setIsLoading(true);
     
@@ -81,58 +87,60 @@ const TransactionAmountPage = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Transaction amount</Text>
-          <Text style={styles.subtitle}>Enter the amount you want to send</Text>
-        </View>
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Transaction amount</Text>
+            <Text style={styles.subtitle}>Enter the amount you want to send</Text>
+          </View>
 
-        {/* Recipient Info */}
-        <View style={styles.recipientContainer}>
-          <View style={styles.recipientInfo}>
-            <View style={styles.avatarContainer}>
-              <Text style={styles.avatarText}>S</Text>
+          {/* Recipient Info */}
+          <View style={styles.recipientContainer}>
+            <View style={styles.recipientInfo}>
+              <View style={styles.avatarContainer}>
+                <Text style={styles.avatarText}>S</Text>
+              </View>
+              <View style={styles.recipientDetails}>
+                <Text style={styles.recipientName}>Seth Asante Kwarteng</Text>
+                <Text style={styles.providerName}>Telecel Cash</Text>
+                <Text style={styles.phoneNumber}>233206841990</Text>
+              </View>
             </View>
-            <View style={styles.recipientDetails}>
-              <Text style={styles.recipientName}>Seth Asante Kwarteng</Text>
-              <Text style={styles.providerName}>Telecel Cash</Text>
-              <Text style={styles.phoneNumber}>233206841990</Text>
+            <TouchableOpacity style={styles.changeButton} onPress={() => router.push("../../(screens)/sendMoney/addNewRecipient")}>
+              <Text style={styles.changeButtonText}>Change</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Amount Input */}
+          <View style={styles.amountContainer}>
+            <Text style={styles.amountLabel}>Enter an amount</Text>
+            <View style={styles.amountInputContainer}>
+              <Text style={styles.currency}>GHS</Text>
+              <TextInput
+                style={styles.amountInput}
+                value={amount}
+                onChangeText={handleAmountChange}
+                placeholder="0.00"
+                placeholderTextColor="#C0C0C0"
+                keyboardType="decimal-pad"
+                maxLength={10}
+              />
             </View>
           </View>
-          <TouchableOpacity style={styles.changeButton}  onPress={() => router.push("../../(screens)/sendMoney/addNewRecipient")}>
-            <Text style={styles.changeButtonText}>Change</Text>
+
+          {/* Continue Button */}
+          <TouchableOpacity
+            style={[styles.continueButton, (!amount || isLoading) && styles.disabledButton]}
+            onPress={handleContinue}
+            disabled={!amount || isLoading}
+          >
+            <Text style={styles.continueButtonText}>
+              {isLoading ? 'Processing...' : 'Continue'}
+            </Text>
           </TouchableOpacity>
         </View>
-
-        {/* Amount Input */}
-        <View style={styles.amountContainer}>
-          <Text style={styles.amountLabel}>Enter an amount</Text>
-          <View style={styles.amountInputContainer}>
-            <Text style={styles.currency}>GHS</Text>
-            <TextInput
-              style={styles.amountInput}
-              value={amount}
-              onChangeText={handleAmountChange}
-              placeholder="0.00"
-              placeholderTextColor="#C0C0C0"
-              keyboardType="decimal-pad"
-              maxLength={10}
-            />
-          </View>
-        </View>
-
-        {/* Continue Button */}
-        <TouchableOpacity
-          style={[styles.continueButton, (!amount || isLoading) && styles.disabledButton]}
-          onPress={handleContinue}
-          disabled={!amount || isLoading}
-        >
-          <Text style={styles.continueButtonText}>
-            {isLoading ? 'Processing...' : 'Continue'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      </TouchableWithoutFeedback>
     </SafeAreaView>
   );
 };
@@ -218,7 +226,7 @@ const styles = StyleSheet.create({
   },
   amountContainer: {
     alignItems: 'center',
-    marginBottom: 60,
+    marginBottom: 40,
   },
   amountLabel: {
     fontSize: 14,
@@ -248,7 +256,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 25,
     alignItems: 'center',
-    marginTop: 'auto',
     marginBottom: 30,
   },
   disabledButton: {
