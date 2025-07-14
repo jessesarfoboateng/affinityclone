@@ -53,7 +53,7 @@ const DepositPage = () => {
 
   const handleAccountSelect = () => {
     // Navigate to account selection screen
-    router.push('/account-selection');
+    router.push('../../(screens)/sendMoney/TransactionAmount');
   };
 
   const handleRemovePhone = (phoneId) => {
@@ -77,7 +77,7 @@ const DepositPage = () => {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       
       {/* Header */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <BackIcon />
         </TouchableOpacity>
@@ -85,7 +85,7 @@ const DepositPage = () => {
         <TouchableOpacity onPress={handleCancel}>
           <Text style={styles.cancelButton}>Cancel</Text>
         </TouchableOpacity>
-      </View>
+      </View> */}
 
       {/* Content */}
       <View style={styles.content}>

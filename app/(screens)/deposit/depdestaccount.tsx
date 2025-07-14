@@ -34,8 +34,21 @@ export default function DestAccount() {
     router.push('/bank-transfer-deposit');
   };
 
+  const handleBackPress = (): void => {
+    router.back();
+  };
+
   return (
     <SafeAreaView style={{ backgroundColor: "white", flex: 1 }}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+          <FontAwesome name="chevron-left" size={18} color="#3D1A4D" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Deposit</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
       <View style={{ marginTop: 20, marginLeft: 20 }}>
         <Text style={{ fontSize: 22, fontWeight: "700", fontFamily: "SpaceMono" }}>
           Source of funds
@@ -68,6 +81,30 @@ export default function DestAccount() {
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: '#fff',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#3D1A4D',
+    fontFamily: 'SpaceMono',
+  },
+  headerSpacer: {
+    width: 40,
+  },
   container: {
     padding: 16,
     flex: 1,
