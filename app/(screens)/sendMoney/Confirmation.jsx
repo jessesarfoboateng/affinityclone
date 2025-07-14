@@ -256,6 +256,15 @@ const TransactionConfirmationPage = () => {
         >
           <Text style={styles.confirmButtonText}>Enter PIN to confirm</Text>
         </TouchableOpacity>
+
+         {/* Schedule Later Button */}
+        <TouchableOpacity
+          style={styles.scheduleButton}
+          onPress={() => router.push('/')}
+        >
+          <Text style={styles.scheduleButtonText}>Schehdule for later</Text>
+        </TouchableOpacity>
+
       </View>
     </SafeAreaView>
   );
@@ -417,11 +426,27 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     marginTop: 'auto',
-    marginBottom: 32,
+    marginBottom: 17,
     marginHorizontal: 4,
   },
   confirmButtonText: {
     color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  scheduleButton: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: '#4A148C',
+    alignItems: 'center',
+    marginTop: 'auto',
+    marginBottom: 32,
+    marginHorizontal: 4,
+  },
+  scheduleButtonText: {
+    color: '#4A148C',
     fontSize: 16,
     fontWeight: '600',
   },
