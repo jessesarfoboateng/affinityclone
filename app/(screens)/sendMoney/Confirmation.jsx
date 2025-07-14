@@ -4,12 +4,14 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Alert,
+  Modal,
   SafeAreaView,
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 const TransactionConfirmationPage = () => {
@@ -28,6 +30,8 @@ const TransactionConfirmationPage = () => {
     total: '0.00',
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pin, setPin] = useState('');
   const router = useRouter();
 
   const networks = [
@@ -64,8 +68,7 @@ const TransactionConfirmationPage = () => {
         userName,
         selectedNetworkId,
         phoneNumber,
-        transactionAmount,
-        lastTransaction
+        transactionAmount
       ] = await Promise.all([
         AsyncStorage.getItem('userName'),
         AsyncStorage.getItem('selectedNetwork'),
@@ -110,32 +113,51 @@ const TransactionConfirmationPage = () => {
   };
 
   const handlePinConfirmation = () => {
-    // Navigate to PIN entry screen or show PIN modal
+    setShowPinModal(true);
+  };
+
+  const handlePinSubmit = () => {
+    if (pin.length === 0) {
+      Alert.alert('Error', 'Please enter your PIN');
+      return;
+    }
+
+    // Close modal first
+    setShowPinModal(false);
+    
+    // Show PIN entered alert
     Alert.alert(
-      'PIN Required',
-      'Please enter your PIN to confirm the transaction',
+      'PIN Entered',
+      'Your PIN has been entered successfully',
       [
         {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Enter PIN',
+          text: 'OK',
           onPress: () => {
-            Alert.alert(
-              'Transaction Successful',
-              `GHS ${transactionData.amount} has been sent to ${transactionData.recipientName}`,
-              [
-                {
-                  text: 'OK',
-                  onPress: () => router.push('../../(screens)/home'),
-                },
-              ]
-            );
+            // Then show transaction success
+            setTimeout(() => {
+              Alert.alert(
+                'Transaction Successful',
+                `GHS ${transactionData.amount} has been sent to ${transactionData.recipientName}`,
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => router.push('../../(screens)/home'),
+                  },
+                ]
+              );
+            }, 500);
           },
         },
       ]
     );
+    
+    // Reset PIN
+    setPin('');
+  };
+
+  const handleModalClose = () => {
+    setShowPinModal(false);
+    setPin('');
   };
 
   const getInitials = (name) => {
@@ -262,10 +284,49 @@ const TransactionConfirmationPage = () => {
           style={styles.scheduleButton}
           onPress={() => router.push('/')}
         >
-          <Text style={styles.scheduleButtonText}>Schehdule for later</Text>
+          <Text style={styles.scheduleButtonText}>Schedule for later</Text>
         </TouchableOpacity>
-
       </View>
+
+      {/* Simplified PIN Modal */}
+      <Modal
+        visible={showPinModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={handleModalClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            {/* PIN Input Label */}
+            <Text style={styles.pinLabel}>Please enter your Affinity PIN</Text>
+            
+            {/* PIN Input */}
+            <View style={styles.pinInputContainer}>
+              <TextInput
+                style={styles.pinInput}
+                value={pin}
+                onChangeText={setPin}
+                secureTextEntry={true}
+                keyboardType="numeric"
+                maxLength={6}
+                placeholder=""
+                autoFocus={true}
+              />
+              <TouchableOpacity style={styles.eyeIcon}>
+                <Ionicons name="eye-off" size={20} color="#666666" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Send Button */}
+            <TouchableOpacity
+              style={styles.sendButton}
+              onPress={handlePinSubmit}
+            >
+              <Text style={styles.sendButtonText}>Send</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -447,6 +508,59 @@ const styles = StyleSheet.create({
   },
   scheduleButtonText: {
     color: '#4A148C',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Simplified Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 20,
+    padding: 24,
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  pinLabel: {
+    fontSize: 16,
+    color: '#000000',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  pinInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    marginBottom: 30,
+    backgroundColor: '#FFFFFF',
+    width: '100%',
+  },
+  pinInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#000000',
+  },
+  eyeIcon: {
+    padding: 5,
+  },
+  sendButton: {
+    backgroundColor: '#4A148C',
+    paddingVertical: 16,
+    borderRadius: 28,
+    alignItems: 'center',
+    width: '100%',
+  },
+  sendButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
   },
