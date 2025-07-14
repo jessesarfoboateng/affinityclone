@@ -195,7 +195,7 @@ export default function HomeScreen() {
        router.push("../../(screens)/sendMoney/SendMoney");
         break;
       case '2': // Deposit into account
-         router.push("../../(screens)/Deposit");
+         router.push("../../(screens)/deposit/Deposit");
         break;
       case '3': // Make Payment
          router.push("../../(screens)/Payment");

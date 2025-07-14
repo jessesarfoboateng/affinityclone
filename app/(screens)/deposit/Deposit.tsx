@@ -7,18 +7,6 @@ const Deposit = () => {
 
   return (
     <SafeAreaView style={{ backgroundColor: 'white', flex: 1 }}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="chevron-back" size={24} color="#333333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Deposit Money</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-
       {/* Content */}
       <View style={{ marginTop: 20, marginLeft: 20 }}>
         <Text style={{ fontSize: 22, fontWeight: "700", fontFamily: "SpaceMono" }}>
@@ -54,29 +42,6 @@ const Deposit = () => {
 export default Deposit;
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    backgroundColor: 'white',
-  },
-  backButton: {
-    padding: 5,
-    marginLeft: -5, // Adjust for better visual alignment
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    width: 34, // Same width as back button to center the title
-  },
   cardContainer: {
     height: 100,
     width: "90%",
