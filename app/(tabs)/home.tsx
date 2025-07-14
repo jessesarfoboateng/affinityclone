@@ -192,7 +192,7 @@ export default function HomeScreen() {
 
     switch (actionId) {
       case '1': // Send Money
-       router.push("../../(screens)/SendMoney");
+       router.push("../../(screens)/sendMoney/SendMoney");
         break;
       case '2': // Deposit into account
          router.push("../../(screens)/Deposit");
