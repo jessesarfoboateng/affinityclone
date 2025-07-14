@@ -45,13 +45,14 @@ const SendMoneyPage = () => {
     },
   ];
 
-  // Load user name from AsyncStorage on component mount
+  // Load user data from AsyncStorage on component mount
   useEffect(() => {
-    loadUserName();
+    loadUserData();
   }, []);
 
-  const loadUserName = async () => {
+  const loadUserData = async () => {
     try {
+      // Load user name
       const name = await AsyncStorage.getItem('userName');
       if (name) {
         setUserName(name);
@@ -60,15 +61,51 @@ const SendMoneyPage = () => {
         setUserName('Seth Asante Kwarteng'); // Default name for demo
         await AsyncStorage.setItem('userName', 'Seth Asante Kwarteng');
       }
+
+      // Load previously selected network
+      const savedNetwork = await AsyncStorage.getItem('selectedNetwork');
+      if (savedNetwork) {
+        setSelectedNetwork(savedNetwork);
+      }
+
+      // Load previously entered phone number (optional)
+      const savedPhoneNumber = await AsyncStorage.getItem('phoneNumber');
+      if (savedPhoneNumber) {
+        setPhoneNumber(savedPhoneNumber);
+      }
     } catch (error) {
-      console.error('Error loading user name:', error);
+      console.error('Error loading user data:', error);
       setUserName('Seth Asante Kwarteng'); // Fallback
+    }
+  };
+
+  const saveNetworkSelection = async (networkId) => {
+    try {
+      await AsyncStorage.setItem('selectedNetwork', networkId);
+    } catch (error) {
+      console.error('Error saving network selection:', error);
+    }
+  };
+
+  const savePhoneNumber = async (phone) => {
+    try {
+      await AsyncStorage.setItem('phoneNumber', phone);
+    } catch (error) {
+      console.error('Error saving phone number:', error);
     }
   };
 
   const handleNetworkSelect = (networkId) => {
     setSelectedNetwork(networkId);
     setIsDropdownOpen(false);
+    // Save the selected network to AsyncStorage
+    saveNetworkSelection(networkId);
+  };
+
+  const handlePhoneNumberChange = (text) => {
+    setPhoneNumber(text);
+    // Save phone number to AsyncStorage as user types (debounced approach would be better for performance)
+    savePhoneNumber(text);
   };
 
   const handleContinue = () => {
@@ -77,8 +114,36 @@ const SendMoneyPage = () => {
     }
   };
 
-  const handleConfirmContinue = () => {
-    // Here you would typically navigate to the next screen or process the transaction
+  const handleConfirmContinue = async () => {
+    try {
+      // Save the complete transaction data before navigation
+      const transactionData = {
+        network: selectedNetwork,
+        phoneNumber: phoneNumber,
+        recipientName: userName,
+        timestamp: new Date().toISOString()
+      };
+      
+      await AsyncStorage.setItem('lastTransaction', JSON.stringify(transactionData));
+      
+      // You might also want to save to a list of recent transactions
+      const recentTransactions = await AsyncStorage.getItem('recentTransactions');
+      let transactions = recentTransactions ? JSON.parse(recentTransactions) : [];
+      
+      // Add new transaction to the beginning of the array
+      transactions.unshift(transactionData);
+      
+      // Keep only the last 10 transactions
+      if (transactions.length > 10) {
+        transactions = transactions.slice(0, 10);
+      }
+      
+      await AsyncStorage.setItem('recentTransactions', JSON.stringify(transactions));
+      
+    } catch (error) {
+      console.error('Error saving transaction data:', error);
+    }
+
     setIsConfirmModalOpen(false);
     const selectedNetworkName = networks.find(n => n.id === selectedNetwork)?.name;
     router.push("../../(screens)/sendMoney/Categories");
@@ -87,6 +152,16 @@ const SendMoneyPage = () => {
   const handleChangeRecipient = () => {
     setIsConfirmModalOpen(false);
     // You might want to clear the form or navigate back
+  };
+
+  const clearStoredData = async () => {
+    try {
+      await AsyncStorage.multiRemove(['selectedNetwork', 'phoneNumber', 'lastTransaction']);
+      setSelectedNetwork(null);
+      setPhoneNumber('');
+    } catch (error) {
+      console.error('Error clearing stored data:', error);
+    }
   };
 
   const selectedNetworkData = networks.find(n => n.id === selectedNetwork);
@@ -126,7 +201,7 @@ const SendMoneyPage = () => {
                 placeholder=""
                 placeholderTextColor="#999999"
                 value={phoneNumber}
-                onChangeText={setPhoneNumber}
+                onChangeText={handlePhoneNumberChange}
                 keyboardType="phone-pad"
                 maxLength={15}
               />
@@ -135,6 +210,14 @@ const SendMoneyPage = () => {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Clear Data Button (for testing purposes) */}
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={clearStoredData}
+          >
+            <Text style={styles.clearButtonText}>Clear Stored Data</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Continue Button */}
@@ -174,7 +257,10 @@ const SendMoneyPage = () => {
                 {networks.map((network) => (
                   <TouchableOpacity
                     key={network.id}
-                    style={styles.networkItem}
+                    style={[
+                      styles.networkItem,
+                      selectedNetwork === network.id && styles.selectedNetworkItem
+                    ]}
                     onPress={() => handleNetworkSelect(network.id)}
                   >
                     <View style={styles.networkInfo}>
@@ -183,6 +269,13 @@ const SendMoneyPage = () => {
                       </View>
                       <Text style={styles.networkName}>{network.name}</Text>
                     </View>
+                    {selectedNetwork === network.id && (
+                      <View style={styles.radioContainer}>
+                        <View style={[styles.radioButton, styles.selectedRadioButton]}>
+                          <View style={styles.radioInner} />
+                        </View>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -310,6 +403,18 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  clearButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#FF6B6B',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  clearButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
   footer: {
     paddingHorizontal: 20,

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Keyboard,
@@ -17,7 +17,63 @@ import {
 const TransactionAmountPage = () => {
   const [amount, setAmount] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [networkName, setNetworkName] = useState('Telecel Cash');
+  const [phoneNumber, setPhoneNumber] = useState('233206841990');
   const router = useRouter();
+
+  // Load saved data when component mounts
+  useEffect(() => {
+    loadSavedData();
+  }, []);
+
+  const loadSavedData = async () => {
+    try {
+      // Load selected network using the same key as in Add New Recipient
+      const selectedNetworkId = await AsyncStorage.getItem('selectedNetwork');
+      
+      // Load phone number using the same key as in Add New Recipient
+      const savedPhoneNumber = await AsyncStorage.getItem('phoneNumber');
+      
+      // Network data mapping - same as in Add New Recipient
+      const networks = [
+        {
+          id: 'at-money',
+          name: 'AT Money',
+          icon: 'card',
+          color: '#E53E3E',
+        },
+        {
+          id: 'mtn-mobile',
+          name: 'MTN Mobile Money',
+          icon: 'phone-portrait',
+          color: '#FFD700',
+        },
+        {
+          id: 'telecel-cash',
+          name: 'Telecel Cash',
+          icon: 'wallet',
+          color: '#E53E3E',
+        },
+      ];
+
+      // Find the selected network by ID
+      const selectedNetwork = networks.find(network => network.id === selectedNetworkId);
+      
+      // Set network name from saved data
+      if (selectedNetwork) {
+        setNetworkName(selectedNetwork.name);
+      }
+
+      // Set phone number from saved data
+      if (savedPhoneNumber) {
+        setPhoneNumber(savedPhoneNumber);
+      }
+
+    } catch (error) {
+      console.error('Error loading saved data:', error);
+      // Keep default values if loading fails
+    }
+  };
 
   const handleAmountChange = (text) => {
     // Remove any non-numeric characters except decimal point
@@ -42,7 +98,7 @@ const TransactionAmountPage = () => {
       Alert.alert('Invalid Amount', 'Please enter a valid amount');
       return;
     } 
-    router.push("../../(screens)/sendMoney/addNewRecipient")
+    router.push("../../(screens)/sendMoney/Confirmation");
     
 
     setIsLoading(true);
@@ -55,26 +111,26 @@ const TransactionAmountPage = () => {
       const transactionData = {
         amount: parseFloat(amount),
         recipient: 'Seth Asante Kwarteng',
-        recipientNumber: '233206841990',
-        provider: 'Telecel Cash',
+        recipientNumber: phoneNumber,
+        provider: networkName,
         timestamp: new Date().toISOString(),
       };
       
       await AsyncStorage.setItem('lastTransaction', JSON.stringify(transactionData));
       
-      Alert.alert(
-        'Success', 
-        `Amount GHS ${amount} saved successfully!`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate to next screen or perform next action
-              console.log('Transaction data saved:', transactionData);
-            }
-          }
-        ]
-      );
+      // Alert.alert(
+      //   'Success', 
+      //   `Amount GHS ${amount} saved successfully!`,
+      //   [
+      //     {
+      //       text: 'OK',
+      //       onPress: () => {
+      //         // Navigate to next screen or perform next action
+      //         console.log('Transaction data saved:', transactionData);
+      //       }
+      //     }
+      //   ]
+      // );
     } catch (error) {
       Alert.alert('Error', 'Failed to save transaction amount');
       console.error('AsyncStorage error:', error);
@@ -103,8 +159,8 @@ const TransactionAmountPage = () => {
               </View>
               <View style={styles.recipientDetails}>
                 <Text style={styles.recipientName}>Seth Asante Kwarteng</Text>
-                <Text style={styles.providerName}>Telecel Cash</Text>
-                <Text style={styles.phoneNumber}>233206841990</Text>
+                <Text style={styles.providerName}>{networkName}</Text>
+                <Text style={styles.phoneNumber}>{phoneNumber}</Text>
               </View>
             </View>
             <TouchableOpacity style={styles.changeButton} onPress={() => router.push("../../(screens)/sendMoney/addNewRecipient")}>

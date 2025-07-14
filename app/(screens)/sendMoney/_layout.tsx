@@ -93,6 +93,24 @@ export default function ScreensLayout() {
           ),
         }}
       />
+
+      <Stack.Screen 
+        name='Confirmation' 
+        options={{
+          title: "Send money",
+          headerShown: true,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()}>
+              <AntDesign name="left" size={24} color="gray" />
+            </TouchableOpacity>
+          ), 
+          headerRight: () => (
+            <TouchableOpacity>
+              <Text style={{ color: "red" }}>Cancel</Text>
+            </TouchableOpacity>
+          ),
+        }}
+      />
     </Stack>
   );
 }
