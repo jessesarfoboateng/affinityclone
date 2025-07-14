@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   Keyboard,
@@ -21,6 +22,7 @@ const SendMoneyPage = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [userName, setUserName] = useState('');
+  const router = useRouter();
 
   const networks = [
     {
@@ -79,7 +81,7 @@ const SendMoneyPage = () => {
     // Here you would typically navigate to the next screen or process the transaction
     setIsConfirmModalOpen(false);
     const selectedNetworkName = networks.find(n => n.id === selectedNetwork)?.name;
-    alert(`Transaction confirmed!\nNetwork: ${selectedNetworkName}\nPhone: ${phoneNumber}\nRecipient: ${userName}`);
+    router.push("../../(screens)/sendMoney/Categories");
   };
 
   const handleChangeRecipient = () => {
