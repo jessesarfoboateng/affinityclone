@@ -54,7 +54,7 @@ export default function DestAccount() {
 
   const handleRecipientSelect = (recipientType) => {
     setShowRecipientModal(false);
-    router.push("../../(screens)/recipient");
+    router.push("../../(screens)/sendMoney/addNewRecipient");
     // Handle the selected recipient type
     console.log('Selected recipient:', recipientType);
     // Navigate to appropriate screen based on selection
