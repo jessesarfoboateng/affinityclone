@@ -4,7 +4,7 @@ import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-export default function ScreensLayout() {
+export default function ScreenLayout() {
   const router = useRouter();
   const [showCancelModal, setShowCancelModal] = useState(false);
 
@@ -48,6 +48,23 @@ export default function ScreensLayout() {
 
         <Stack.Screen
           name="depositIntoAccount"
+          options={{
+            title: "Send money",
+            headerShown: true,
+            headerLeft: () => (
+              <TouchableOpacity 
+                onPress={() => router.back()}
+                style={styles.backButton}
+              >
+                <AntDesign name="left" size={24} color="gray" />
+              </TouchableOpacity>
+            ),
+            headerRight: () => <CancelButton />,
+          }}
+        />
+
+        <Stack.Screen
+          name="SourceAccount"
           options={{
             title: "Send money",
             headerShown: true,

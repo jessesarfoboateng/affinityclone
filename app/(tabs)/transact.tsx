@@ -116,7 +116,7 @@ export default function TransactScreen() {
         router.push("../../(screens)/deposit/Deposit");
         break;
       case '3':
-        router.push("../../(screens)/Payment");
+        router.push("../../(screens)/payment/paymentLanding");
         break;
       case '4':
         router.push("../../(screens)/scheduledTransactions");

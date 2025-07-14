@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const Deposit = () => {
+const DepositPage = () => {
   const router = useRouter();
 
   return (
@@ -19,7 +19,7 @@ const Deposit = () => {
 
       <TouchableOpacity 
         style={styles.cardContainer} 
-        onPress={() => router.push("../../(screens)/depdestaccount")}
+        onPress={() => router.push("../../(screens)/deposit/depdestaccount")}
       >
         <View style={styles.contentContainer}>
           {/* Piggy bank icon container */}
@@ -39,7 +39,7 @@ const Deposit = () => {
   );
 };
 
-export default Deposit;
+export default DepositPage;
 
 const styles = StyleSheet.create({
   cardContainer: {

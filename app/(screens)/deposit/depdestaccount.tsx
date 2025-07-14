@@ -27,7 +27,7 @@ export default function DestAccount() {
   const router = useRouter();
 
   const handleMobileWalletPress = (): void => {
-    router.push('(screens)/depositIntoAccount');
+    router.push('(screens)/deposit/depositIntoAccount');
   };
 
   const handleBankTransferPress = (): void => {
