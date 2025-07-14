@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useState } from 'react';
 import {
   Keyboard,
   Modal,
@@ -18,27 +19,50 @@ const SendMoneyPage = () => {
   const [selectedNetwork, setSelectedNetwork] = useState(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [userName, setUserName] = useState('');
 
   const networks = [
     {
       id: 'at-money',
       name: 'AT Money',
-      logo: '🏧',
+      icon: 'card',
       color: '#E53E3E',
     },
     {
       id: 'mtn-mobile',
       name: 'MTN Mobile Money',
-      logo: '📱',
+      icon: 'phone-portrait',
       color: '#FFD700',
     },
     {
       id: 'telecel-cash',
       name: 'Telecel Cash',
-      logo: '💳',
+      icon: 'wallet',
       color: '#E53E3E',
     },
   ];
+
+  // Load user name from AsyncStorage on component mount
+  useEffect(() => {
+    loadUserName();
+  }, []);
+
+  const loadUserName = async () => {
+    try {
+      const name = await AsyncStorage.getItem('userName');
+      if (name) {
+        setUserName(name);
+      } else {
+        // If no name is stored, you might want to set a default or prompt user
+        setUserName('Seth Asante Kwarteng'); // Default name for demo
+        await AsyncStorage.setItem('userName', 'Seth Asante Kwarteng');
+      }
+    } catch (error) {
+      console.error('Error loading user name:', error);
+      setUserName('Seth Asante Kwarteng'); // Fallback
+    }
+  };
 
   const handleNetworkSelect = (networkId) => {
     setSelectedNetwork(networkId);
@@ -47,10 +71,20 @@ const SendMoneyPage = () => {
 
   const handleContinue = () => {
     if (selectedNetwork && phoneNumber.trim()) {
-      const selectedNetworkName = networks.find(n => n.id === selectedNetwork)?.name;
-      alert(`Selected: ${selectedNetworkName}\nPhone: ${phoneNumber}`);
-      // Here you would typically navigate to the next screen
+      setIsConfirmModalOpen(true);
     }
+  };
+
+  const handleConfirmContinue = () => {
+    // Here you would typically navigate to the next screen or process the transaction
+    setIsConfirmModalOpen(false);
+    const selectedNetworkName = networks.find(n => n.id === selectedNetwork)?.name;
+    alert(`Transaction confirmed!\nNetwork: ${selectedNetworkName}\nPhone: ${phoneNumber}\nRecipient: ${userName}`);
+  };
+
+  const handleChangeRecipient = () => {
+    setIsConfirmModalOpen(false);
+    // You might want to clear the form or navigate back
   };
 
   const selectedNetworkData = networks.find(n => n.id === selectedNetwork);
@@ -120,7 +154,7 @@ const SendMoneyPage = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Dropdown Modal */}
+        {/* Network Dropdown Modal */}
         <Modal
           visible={isDropdownOpen}
           transparent={true}
@@ -143,7 +177,7 @@ const SendMoneyPage = () => {
                   >
                     <View style={styles.networkInfo}>
                       <View style={[styles.logoContainer, { backgroundColor: network.color }]}>
-                        <Text style={styles.logoText}>{network.logo}</Text>
+                        <Ionicons name={network.icon} size={18} color="white" />
                       </View>
                       <Text style={styles.networkName}>{network.name}</Text>
                     </View>
@@ -152,6 +186,46 @@ const SendMoneyPage = () => {
               </ScrollView>
             </View>
           </TouchableOpacity>
+        </Modal>
+
+        {/* Confirmation Modal */}
+        <Modal
+          visible={isConfirmModalOpen}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setIsConfirmModalOpen(false)}
+        >
+          <View style={styles.confirmModalOverlay}>
+            <View style={styles.confirmModalContent}>
+              <Text style={styles.confirmTitle}>Confirm recipient</Text>
+              <Text style={styles.confirmSubtitle}>Please confirm the name of the recipient below</Text>
+              
+              <View style={styles.recipientNameContainer}>
+                <Text style={styles.recipientName}>{userName}</Text>
+              </View>
+
+              <TouchableOpacity style={styles.favouriteButton}>
+                <Ionicons name="star-outline" size={16} color="#FFB800" />
+                <Text style={styles.favouriteText}>Add to my favourites</Text>
+              </TouchableOpacity>
+
+              <View style={styles.confirmButtonsContainer}>
+                <TouchableOpacity
+                  style={styles.confirmContinueButton}
+                  onPress={handleConfirmContinue}
+                >
+                  <Text style={styles.confirmContinueText}>Continue</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.changeRecipientButton}
+                  onPress={handleChangeRecipient}
+                >
+                  <Text style={styles.changeRecipientText}>Change recipient</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
         </Modal>
       </SafeAreaView>
     </TouchableWithoutFeedback>
@@ -176,12 +250,12 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#888888',
+    color: '#3a3737ff',
     marginBottom: 40,
   },
   sectionTitle: {
     fontSize: 16,
-    color: '#888888',
+    color: '#3a3737ff',
     marginBottom: 12,
     fontWeight: '400',
   },
@@ -193,21 +267,23 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#663399',
     backgroundColor: '#FFFFFF',
     marginBottom: 30,
+  },
+  dropdownContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   dropdownText: {
     fontSize: 16,
     color: '#333333',
-    flex: 1,
+    marginLeft: 8,
   },
   dropdownPlaceholder: {
     color: '#CCCCCC',
-  },
-  dropdownArrow: {
-    fontSize: 12,
-    color: '#666666',
+    marginLeft: 0,
   },
   phoneNumberSection: {
     marginTop: 10,
@@ -216,7 +292,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#663399',
     borderRadius: 8,
     backgroundColor: '#FFFFFF',
   },
@@ -255,7 +331,7 @@ const styles = StyleSheet.create({
   continueButtonTextActive: {
     color: '#FFFFFF',
   },
-  // Modal styles
+  // Network Dropdown Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -306,15 +382,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logoContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
-  },
-  logoText: {
-    fontSize: 18,
   },
   networkName: {
     fontSize: 16,
@@ -341,6 +414,80 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#663399',
+  },
+  // Confirmation Modal styles
+  confirmModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  confirmModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 40,
+    minHeight: 300,
+  },
+  confirmTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  confirmSubtitle: {
+    fontSize: 14,
+    color: '#888888',
+    marginBottom: 40,
+  },
+  recipientNameContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  recipientName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333333',
+  },
+  favouriteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    marginBottom: 40,
+  },
+  favouriteText: {
+    fontSize: 14,
+    color: '#FFB800',
+    marginLeft: 8,
+  },
+  confirmButtonsContainer: {
+    gap: 12,
+  },
+  confirmContinueButton: {
+    backgroundColor: '#663399',
+    paddingVertical: 16,
+    borderRadius: 25,
+    alignItems: 'center',
+  },
+  confirmContinueText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  changeRecipientButton: {
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 16,
+    borderRadius: 25,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#663399',
+  },
+  changeRecipientText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#663399',
   },
 });
 
