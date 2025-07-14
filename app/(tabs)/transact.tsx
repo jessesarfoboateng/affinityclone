@@ -110,10 +110,10 @@ export default function TransactScreen() {
     // TODO: Add your specific paths here
     switch (typeId) {
       case '1':
-        router.push("../../(screens)/SendMoney");
+        router.push("../../(screens)/sendMoney/SendMoney");
         break;
       case '2':
-        router.push("../../(screens)/Deposit");
+        router.push("../../(screens)/deposit/Deposit");
         break;
       case '3':
         router.push("../../(screens)/Payment");

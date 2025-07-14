@@ -1,18 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-
-const Deposit = () => {
-const router = useRouter()
-  return (
-     <SafeAreaView style={{backgroundColor:'white',flex:1}}>
+  const SendMoney = () => {
+    const router = useRouter()
+    return (
+      <SafeAreaView style={{backgroundColor:'white',flex:1}}>
       <View style={{marginTop:20,marginLeft:20}}>
-        <Text style={{fontSize:22,fontWeight:"700",fontFamily:"SpaceMono"}}>Destination Account</Text>
-        <Text style={{marginTop:15,fontSize:12,color:"gray"}}>Select the receiving account</Text>
+        <Text style={{fontSize:22,fontWeight:"700",fontFamily:"SpaceMono"}}>Source Account</Text>
+        <Text style={{marginTop:15,fontSize:12,color:"gray"}}>Select an account to send money from</Text>
       </View>
- <TouchableOpacity style={styles.cardContainer} onPress={()=>router.push("../../(screens)/depdestaccount")}> 
+         <TouchableOpacity style={styles.cardContainer} onPress={()=>router.push("../../(screens)/sendMoney/DestAccount")}> 
       <View style={styles.contentContainer}>
         {/* Piggy bank icon container */}
         <View style={styles.iconContainer}>
@@ -27,14 +25,15 @@ const router = useRouter()
         </View>
       </View>
     </TouchableOpacity>
-    </SafeAreaView>
-  )
-}
 
-export default Deposit
+      </SafeAreaView>
+    )
+  }
 
-const styles = StyleSheet.create({
-      cardContainer: {
+  export default SendMoney
+
+  const styles = StyleSheet.create({
+    cardContainer: {
     height: 100,
     width: "90%",
     borderRadius: 16,
@@ -90,4 +89,4 @@ const styles = StyleSheet.create({
     color: "#F59E0B", 
     fontWeight: '500',
   },
-})
+  })

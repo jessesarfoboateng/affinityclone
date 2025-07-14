@@ -15,7 +15,7 @@ export default function ScreensLayout() {
       headerShown:true,
       
       headerRight: () => (
-                <TouchableOpacity onPress={() => router.setParams({ showMenu: true })} style={{ marginRight: 16 }}>
+                <TouchableOpacity onPress={() => router.setParams({ showMenu: "true" })} style={{ marginRight: 16 }}>
               <MaterialCommunityIcons name="dots-horizontal" size={24} color="gray" />
               </TouchableOpacity>
             ),
@@ -27,49 +27,6 @@ export default function ScreensLayout() {
       ),       
       }}/>
 
-      <Stack.Screen name='SendMoney' options={{
-        title:"Send money",
-        headerShown:true,
-        headerLeft:() => (
-        <TouchableOpacity onPress={()=> router.back()}>
-          <AntDesign name="left" size={24} color="gray" />
-        </TouchableOpacity>
-
-      ), 
-
-      }}/>
-
-      <Stack.Screen name='DestAccount' options={{
-        title:"Send money",
-        headerShown:true,
-        headerLeft:() => (
-        <TouchableOpacity onPress={()=> router.back()}>
-          <AntDesign name="left" size={24} color="gray" />
-        </TouchableOpacity>
-
-      ), 
-        headerRight: () => (
-          <TouchableOpacity>
-            <Text style={{color:"red"}}>Cancel</Text>
-          </TouchableOpacity>
-        ),
-      }}/>
-
-      <Stack.Screen name="Deposit" options={{
-        title:"Deposit into account",
-        headerShown:true,
-        headerLeft:() => (
-        <TouchableOpacity onPress={()=> router.back()}>
-          <AntDesign name="left" size={24} color="gray" />
-        </TouchableOpacity>
-        ),
-          headerRight: () => (
-          <TouchableOpacity>
-            <Text style={{color:"red"}}>Cancel</Text>
-          </TouchableOpacity>
-        ), 
-
-      }}/>
 
        <Stack.Screen name="Payment" options={{
         title:"Make payment",

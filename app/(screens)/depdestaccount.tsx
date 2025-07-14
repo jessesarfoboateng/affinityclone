@@ -1,15 +1,22 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
-import React from 'react';
-import { Image, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ImageSourcePropType, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-const Card = ({ label, backgroundColor, icon, iconType = 'image', onPress }) => (
+interface CardProps {
+  label: string;
+  backgroundColor: string;
+  icon: ImageSourcePropType | React.ReactElement;
+  iconType?: 'image' | 'component';
+  onPress: () => void;
+}
+
+const Card = ({ label, backgroundColor, icon, iconType = 'image', onPress }: CardProps) => (
   <TouchableOpacity style={[styles.card, { backgroundColor }]} onPress={onPress}>
     <View style={styles.iconWrapper}>
       {iconType === 'image' ? (
-        <Image source={icon} style={styles.icon} />
+        <Image source={icon as ImageSourcePropType} style={styles.icon} />
       ) : (
-        icon
+        <>{icon}</>
       )}
     </View>
     <Text style={styles.label}>{label}</Text>
@@ -19,24 +26,28 @@ const Card = ({ label, backgroundColor, icon, iconType = 'image', onPress }) => 
 export default function DestAccount() {
   const router = useRouter();
 
-  const handleMobileWalletPress = () => {
+  const handleMobileWalletPress = (): void => {
     router.push('(screens)/depositIntoAccount');
   };
 
-  const handleBankTransferPress = () => {
+  const handleBankTransferPress = (): void => {
     router.push('/bank-transfer-deposit');
   };
 
   return (
-    <SafeAreaView style={{backgroundColor:"white",flex:1}}>
-      <View style={{marginTop:20,marginLeft:20}}>
-        <Text style={{fontSize:22,fontWeight:"700",fontFamily:"SpaceMono"}}>Source of funds</Text>
-        <Text style={{marginTop:15,fontSize:12,color:"gray"}}>Select how you want to deposit into your account</Text>
+    <SafeAreaView style={{ backgroundColor: "white", flex: 1 }}>
+      <View style={{ marginTop: 20, marginLeft: 20 }}>
+        <Text style={{ fontSize: 22, fontWeight: "700", fontFamily: "SpaceMono" }}>
+          Source of funds
+        </Text>
+        <Text style={{ marginTop: 15, fontSize: 12, color: "gray" }}>
+          Select how you want to deposit into your account
+        </Text>
       </View>
 
       <View style={styles.container}>
         <View style={styles.row}>
-         <Card
+          <Card
             label="From mobile wallet"
             backgroundColor="#E6FBF7"
             icon={require('@/assets/images/Wallet-pana.png')}
@@ -51,10 +62,9 @@ export default function DestAccount() {
             onPress={handleBankTransferPress}
           />
         </View>
-        
-      </View>      
+      </View>
     </SafeAreaView>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -98,4 +108,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-})
+});
